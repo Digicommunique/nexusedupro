@@ -1,0 +1,7 @@
+{
+  "name": "EduNexus Admin Panel",
+  "description": "Comprehensive school management system for managing students, staff, and overall institutional performance with AI-powered insights.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
