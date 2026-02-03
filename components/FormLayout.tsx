@@ -20,7 +20,6 @@ export const FormSection: React.FC<SectionProps> = ({ title, description, childr
   </div>
 );
 
-// Added defaultValue prop to support pre-filling uncontrolled inputs in academic and profile forms
 export const Input: React.FC<{
   label: string;
   type?: string;
@@ -29,7 +28,8 @@ export const Input: React.FC<{
   placeholder?: string;
   className?: string;
   defaultValue?: string | number;
-}> = ({ label, type = 'text', name, required, placeholder, className, defaultValue }) => (
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+}> = ({ label, type = 'text', name, required, placeholder, className, defaultValue, onBlur }) => (
   <div className={`space-y-2 ${className}`}>
     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">
       {label} {required && <span className="text-rose-500">*</span>}
@@ -40,15 +40,14 @@ export const Input: React.FC<{
       required={required}
       placeholder={placeholder}
       defaultValue={defaultValue}
+      onBlur={onBlur}
       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 outline-none transition-all text-sm font-medium"
       style={{ '--tw-ring-color': COLORS.primary } as any}
       onFocus={(e) => (e.currentTarget.style.borderColor = COLORS.primary)}
-      onBlur={(e) => (e.currentTarget.style.borderColor = '#e2e8f0')}
     />
   </div>
 );
 
-// Added onSelect and defaultValue props to support dynamic filtering and pre-selections in management modules
 export const Select: React.FC<{
   label: string;
   name: string;

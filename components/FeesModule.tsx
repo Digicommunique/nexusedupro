@@ -413,7 +413,12 @@ const FeesModule: React.FC<FeesModuleProps> = ({
                        <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100 space-y-4">
                           <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Waiver / Discount Management</p>
                           <div className="grid grid-cols-2 gap-4">
-                             <Input label="Discount (₹)" name="discount" type="number" onBlur={(e)=>setDiscount(Number(e.target.value))} />
+                             <Input 
+                               label="Discount (₹)" 
+                               name="discount" 
+                               type="number" 
+                               onBlur={(e: React.FocusEvent<HTMLInputElement>) => setDiscount(Number(e.target.value))} 
+                             />
                              <Input label="Waiver Reason" name="discountReason" placeholder="Scholarship, RTE..." />
                           </div>
                        </div>
@@ -426,7 +431,13 @@ const FeesModule: React.FC<FeesModuleProps> = ({
                              )}
                           </div>
                           <div className="grid grid-cols-2 gap-4">
-                             <Input label="Late Fine (₹)" name="penalty" type="number" defaultValue={penalty} onBlur={(e)=>setPenalty(Number(e.target.value))} />
+                             <Input 
+                               label="Late Fine (₹)" 
+                               name="penalty" 
+                               type="number" 
+                               defaultValue={penalty} 
+                               onBlur={(e: React.FocusEvent<HTMLInputElement>) => setPenalty(Number(e.target.value))} 
+                             />
                              <Input label="Penalty Reason" name="penaltyReason" placeholder="Late Submission" />
                           </div>
                        </div>

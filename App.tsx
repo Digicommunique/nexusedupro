@@ -93,7 +93,37 @@ const App: React.FC = () => {
   ]);
 
   const [staff] = useState<Staff[]>([
-    { id: 'T1', name: 'Dr. Anjali Verma', gender: 'Female', dob: '1985-08-22', address: 'Mumbai', bloodGroup: 'B-', staffId: 'EDU-MAIN-STF-P9K1', role: 'Teacher', relationshipStatus: 'Married', qualification: 'PhD', bankName: 'HDFC', ifscCode: 'HDFC001', accountNumber: '123', joiningDate: '2020-01-15', assignedGrade: 'Class 10', assignedSection: 'A', isClassTeacher: true }
+    { 
+      id: 'T1', 
+      name: 'Dr. Anjali Verma', 
+      gender: 'Female', 
+      dob: '1985-08-22', 
+      address: 'Mumbai', 
+      bloodGroup: 'B-', 
+      staffId: 'EDU-MAIN-STF-P9K1', 
+      role: 'Teacher', 
+      relationshipStatus: 'Married', 
+      qualification: 'PhD', 
+      bankName: 'HDFC', 
+      ifscCode: 'HDFC001', 
+      accountNumber: '123', 
+      joiningDate: '2020-01-15', 
+      assignedGrade: 'Class 10', 
+      assignedSection: 'A', 
+      isClassTeacher: true,
+      fatherName: 'Late Suresh Verma',
+      fatherOccupation: 'Retired Professor',
+      fatherOccupationAddress: 'Delhi North Campus',
+      fatherContact: '0000000000',
+      motherName: 'Meena Verma',
+      motherOccupation: 'Homemaker',
+      motherOccupationAddress: 'Mumbai Residency',
+      motherContact: '0000000000',
+      guardianName: 'Suresh Verma',
+      guardianRelationship: 'Father',
+      guardianAddress: 'Mumbai Main Street',
+      guardianContact: '0000000000'
+    }
   ]);
 
   const handleLogin = (role: string) => {
