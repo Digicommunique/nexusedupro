@@ -30,7 +30,7 @@ import { COLORS } from './constants';
 import { 
   NavItem, Student, Staff, AppSettings, HostelRoom, HostelAllotment, 
   TransportRoute, TransportAssignment, IssuedBook, DamageReport, StaffAttendance, Notice, Examination,
-  Homework, HomeworkSubmission, ExamResult, StudentFeeRecord
+  Homework, HomeworkSubmission, ExamResult, StudentFeeRecord, Donation
 } from './types';
 
 const App: React.FC = () => {
@@ -71,6 +71,11 @@ const App: React.FC = () => {
     { id: 'E2', title: 'Unit Test 2', grade: 'Class 9', section: 'B', subject: 'Science', date: '2025-03-18', totalMarks: 50, isResultDeclared: false }
   ]);
 
+  const [donations] = useState<Donation[]>([
+    { id: 'D1', campaignId: 'C1', donorName: 'Amitabh Sharma', donorAddress: 'Delhi', donorPhone: '9810234567', donorEmail: 'amit@gmail.com', purpose: 'Philanthropy', amount: 25000, date: '2025-02-10' },
+    { id: 'D2', campaignId: 'C2', donorName: 'Ramesh Singh', donorAddress: 'Noida', donorPhone: '9810234568', donorEmail: 'ramesh@gmail.com', purpose: 'CSR', amount: 15000, date: '2025-02-12' }
+  ]);
+
   const [homeworks] = useState<Homework[]>([
     { id: 'H1', title: 'Calculus Problems - Set 1', description: 'Solve all problems from page 42-45 of the main textbook.', grade: 'Class 10', section: 'A', subject: 'Mathematics', dueDate: '2025-03-25' }
   ]);
@@ -84,7 +89,8 @@ const App: React.FC = () => {
   ]);
 
   const [feeRecords] = useState<StudentFeeRecord[]>([
-    { id: 'FR1', studentId: 'S1', totalAmount: 5800, discount: 0, paidAmount: 0, dueDate: '2025-03-05', status: 'Unpaid' }
+    { id: 'FR1', studentId: 'S1', totalAmount: 5800, discount: 0, paidAmount: 0, dueDate: '2025-03-05', status: 'Unpaid' },
+    { id: 'FR2', studentId: 'S2', totalAmount: 5800, discount: 500, paidAmount: 5300, dueDate: '2025-03-05', status: 'Paid' }
   ]);
 
   const handleLogin = (role: string) => {
@@ -205,6 +211,8 @@ const App: React.FC = () => {
           staff={staff} 
           transportRoutes={transportRoutes} 
           exams={exams}
+          donations={donations}
+          feeRecords={feeRecords}
         />
       );
       case 'notices': return <NoticeModule settings={settings} notices={notices} onAddNotice={handleAddNotice} onDeleteNotice={handleDeleteNotice} />;
@@ -231,7 +239,17 @@ const App: React.FC = () => {
       case 'certificates': return <CertificateModule settings={settings} students={students} staff={staff} />;
       case 'credentials': return <CredentialRegistry students={students} staff={staff} />;
       case 'settings': return <SettingsView settings={settings} onUpdate={setSettings} />;
-      default: return <Dashboard notices={notices} students={students} staff={staff} transportRoutes={transportRoutes} exams={exams} />;
+      default: return (
+        <Dashboard 
+          notices={notices} 
+          students={students} 
+          staff={staff} 
+          transportRoutes={transportRoutes} 
+          exams={exams} 
+          donations={donations}
+          feeRecords={feeRecords}
+        />
+      );
     }
   };
 
