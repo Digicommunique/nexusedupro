@@ -24,6 +24,8 @@ const Sidebar: React.FC<SidebarProps> = ({ active, onSelect, userRole }) => {
     { id: 'academic', label: 'Academic Module', icon: Icons.Academic },
     { id: 'attendance', label: 'Attendance Hub', icon: Icons.Attendance },
     { id: 'examination', label: 'Examination Control', icon: Icons.Examination },
+    { id: 'teacher_homework', label: 'Homework Hub', icon: Icons.Academic },
+    { id: 'teacher_messages', label: 'Liaison Hub', icon: Icons.Activity },
     { id: 'fees', label: 'Fees & Accounts', icon: Icons.Fees },
     { id: 'accounts', label: 'Accounts Ledger', icon: Icons.Plus },
     { id: 'assets', label: 'Asset Management', icon: Icons.Labs },

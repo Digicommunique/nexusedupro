@@ -147,6 +147,8 @@ const App: React.FC = () => {
       case 'academic': return <AcademicModule />;
       case 'attendance': return <AttendanceModule students={students} staff={staff} />;
       case 'examination': return <ExaminationModule students={students} settings={settings} />;
+      case 'teacher_homework': return <HomeworkModule teacher={staff[0]} students={students} />;
+      case 'teacher_messages': return <TeacherMessages teacher={staff[0]} students={students} />;
       case 'payroll': return <PayrollModule staff={staff} settings={settings} staffAttendance={[]} />;
       case 'labs': return <LabModule />;
       case 'activities': return <ActivityModule />;

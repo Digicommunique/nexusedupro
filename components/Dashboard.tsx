@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
-  LineChart, Line
+  LineChart, Line, Legend
 } from 'recharts';
 import { getDashboardInsight } from '../geminiService';
 import { COLORS } from '../constants';
@@ -21,131 +21,212 @@ interface DashboardProps {
   userRole?: string;
 }
 
+const GRADES = ['Pre-Nursery', 'Nursery', 'KG', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12'];
+const SECTIONS = ['A', 'B', 'C', 'D', 'E'];
+
 const Dashboard: React.FC<DashboardProps> = ({ 
   notices, students, staff, transportRoutes, exams, donations, feeRecords, feeReceipts, userRole
 }) => {
   const [insight, setInsight] = useState<string>('Calibrating institutional intelligence...');
   const [showFinanceModal, setShowFinanceModal] = useState(false);
   
-  // Data Aggregators
+  // 360 View Filters
+  const [selectedGrade, setSelectedGrade] = useState<string>('');
+  const [selectedSection, setSelectedSection] = useState<string>('');
+
+  // Granular Filter Logic
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => {
+      const matchGrade = !selectedGrade || s.grade === selectedGrade;
+      const matchSection = !selectedSection || s.section === selectedSection;
+      return matchGrade && matchSection;
+    });
+  }, [students, selectedGrade, selectedSection]);
+
+  const filteredFeeReceipts = useMemo(() => {
+    if (!selectedGrade && !selectedSection) return feeReceipts;
+    const studentIds = new Set(filteredStudents.map(s => s.id));
+    return feeReceipts.filter(r => studentIds.has(r.studentId));
+  }, [feeReceipts, filteredStudents, selectedGrade, selectedSection]);
+
+  // Data Aggregators for 360 View
   const gradeDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
-    students.forEach(s => counts[s.grade] = (counts[s.grade] || 0) + 1);
+    filteredStudents.forEach(s => counts[s.grade] = (counts[s.grade] || 0) + 1);
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [students]);
+  }, [filteredStudents]);
 
   const religionStats = useMemo(() => {
     const counts: Record<string, number> = {};
-    students.forEach(s => {
+    filteredStudents.forEach(s => {
       const rel = s.religion || 'Unknown';
       counts[rel] = (counts[rel] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [students]);
+  }, [filteredStudents]);
 
   const categoryStats = useMemo(() => {
     const counts: Record<string, number> = {};
-    students.forEach(s => {
+    filteredStudents.forEach(s => {
       const cat = s.category || 'General';
       counts[cat] = (counts[cat] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [students]);
+  }, [filteredStudents]);
 
   const feeStats = useMemo(() => {
-    const totalDue = feeRecords.reduce((acc, curr) => acc + (curr.totalAmount - curr.discount), 0);
-    const totalPaid = feeReceipts.reduce((acc, curr) => acc + curr.amountPaid, 0);
+    const totalDue = feeRecords
+      .filter(fr => filteredStudents.some(s => s.id === fr.studentId))
+      .reduce((acc, curr) => acc + (curr.totalAmount - curr.discount), 0);
+    const totalPaid = filteredFeeReceipts.reduce((acc, curr) => acc + curr.amountPaid, 0);
     const outstanding = totalDue - totalPaid;
     return { totalDue, totalPaid, outstanding, percent: totalDue > 0 ? (totalPaid / totalDue) * 100 : 0 };
-  }, [feeRecords, feeReceipts]);
-
-  const dailyCollection = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    return feeReceipts
-      .filter(r => r.paymentDate === today)
-      .reduce((acc, curr) => acc + curr.amountPaid, 0);
-  }, [feeReceipts]);
+  }, [feeRecords, filteredFeeReceipts, filteredStudents]);
 
   useEffect(() => {
     getDashboardInsight({
-      totalStudents: students.length,
+      totalStudents: filteredStudents.length,
       totalStaff: staff.length,
       attendance: 94.2,
-      genderRatio: '52:48'
+      genderRatio: '52:48',
+      segment: selectedGrade ? `${selectedGrade} ${selectedSection}` : 'Global'
     }).then(setInsight);
-  }, [students, staff]);
+  }, [filteredStudents, staff, selectedGrade, selectedSection]);
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Financial Details Modal */}
-      {showFinanceModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-6xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col h-[85vh] animate-in zoom-in-95">
-            <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-900 text-white">
-              <div>
-                 <h2 className="text-3xl font-black uppercase italic tracking-tighter">Detailed Financial Ledger</h2>
-                 <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mt-1">Cross-Session Transaction Audit</p>
-              </div>
-              <button onClick={() => setShowFinanceModal(false)} className="p-4 bg-white/10 hover:bg-rose-500 rounded-2xl transition-all">
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
+      {/* 360° Filter Matrix */}
+      <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-xl flex flex-col md:flex-row items-center gap-8 sticky top-4 z-[45] backdrop-blur-md bg-white/90">
+         <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg">
+               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
             </div>
-            <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50 sticky top-0 z-10">
-                  <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">
-                    <th className="px-6 py-6">Receipt #</th>
-                    <th className="px-6 py-6">Student Enrollment</th>
-                    <th className="px-6 py-6">Class / Sec</th>
-                    <th className="px-6 py-6">Session</th>
-                    <th className="px-6 py-6">Payment Date</th>
-                    <th className="px-6 py-6 text-right">Credit Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {feeReceipts.map(r => (
-                    <tr key={r.id} className="hover:bg-indigo-50/40 transition-all group">
-                      <td className="px-6 py-5 font-mono text-xs font-black text-indigo-500">{r.receiptNo}</td>
-                      <td className="px-6 py-5">
-                         <p className="font-black text-slate-800 uppercase text-xs">{r.studentName}</p>
-                         <p className="text-[9px] font-bold text-slate-400">UID: {r.studentId}</p>
-                      </td>
-                      <td className="px-6 py-5">
-                         <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase">{r.grade} - {r.section}</span>
-                      </td>
-                      <td className="px-6 py-5 text-xs font-bold text-slate-400">{r.session}</td>
-                      <td className="px-6 py-5 text-xs font-black text-slate-500">{r.paymentDate}</td>
-                      <td className="px-6 py-5 text-right font-black text-indigo-600 text-lg">₹{r.amountPaid.toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div>
+               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest leading-none">360° View Filters</h3>
+               <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-widest">Granular Segment Analytics</p>
             </div>
-          </div>
-        </div>
-      )}
+         </div>
+         
+         <div className="flex-1 flex flex-wrap gap-4">
+            <div className="space-y-1 flex-1 min-w-[150px]">
+               <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Grade Analysis</label>
+               <select 
+                 value={selectedGrade} 
+                 onChange={e => setSelectedGrade(e.target.value)}
+                 className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-black uppercase outline-none focus:ring-4 focus:ring-indigo-100 transition-all cursor-pointer"
+               >
+                 <option value="">Global Institution</option>
+                 {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+               </select>
+            </div>
+            <div className="space-y-1 flex-1 min-w-[120px]">
+               <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Section View</label>
+               <select 
+                 value={selectedSection} 
+                 onChange={e => setSelectedSection(e.target.value)}
+                 className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-black uppercase outline-none focus:ring-4 focus:ring-indigo-100 transition-all cursor-pointer"
+               >
+                 <option value="">All Sections</option>
+                 {SECTIONS.map(s => <option key={s} value={s}>Section {s}</option>)}
+               </select>
+            </div>
+            <div className="flex items-end">
+               <button 
+                onClick={() => { setSelectedGrade(''); setSelectedSection(''); }}
+                className="px-6 py-3 bg-slate-100 text-slate-400 hover:text-slate-900 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all"
+               >
+                 Reset View
+               </button>
+            </div>
+         </div>
+      </div>
 
       {/* 360° Matrix Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden">
-        <div>
+        <div className="relative z-10">
           <h1 className="text-5xl font-black text-slate-900 uppercase italic tracking-tighter leading-none border-b-[12px] border-indigo-500 pb-2 inline-block">360° ADMIN COCKPIT</h1>
           <p className="text-slate-500 font-bold uppercase text-xs tracking-[0.4em] mt-6 flex items-center gap-3">
              <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-             Live Institutional Intelligence Hub
+             {selectedGrade ? `Viewing Segment: ${selectedGrade} ${selectedSection}` : 'Global Institutional Hub'}
           </p>
         </div>
         <div className="flex flex-wrap gap-4 relative z-10">
            <div className="px-8 py-5 bg-slate-900 text-white rounded-[2rem] shadow-xl flex flex-col items-center">
-              <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1">Students</span>
-              <span className="text-2xl font-black italic">{students.length}</span>
+              <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1">Segment Count</span>
+              <span className="text-2xl font-black italic">{filteredStudents.length}</span>
            </div>
            <div className="px-8 py-5 bg-indigo-600 text-white rounded-[2rem] shadow-xl flex flex-col items-center">
-              <span className="text-[9px] font-black text-indigo-200 uppercase tracking-widest mb-1">Today Inflow</span>
-              <span className="text-2xl font-black italic">₹{(dailyCollection/1000).toFixed(1)}k</span>
+              <span className="text-[9px] font-black text-indigo-200 uppercase tracking-widest mb-1">Fiscal Collection</span>
+              <span className="text-2xl font-black italic">₹{(filteredFeeReceipts.reduce((a,c)=>a+c.amountPaid, 0)/1000).toFixed(1)}k</span>
            </div>
            <div className="px-8 py-5 bg-emerald-500 text-white rounded-[2rem] shadow-xl flex flex-col items-center">
-              <span className="text-[9px] font-black text-emerald-100 uppercase tracking-widest mb-1">Fiscal Health</span>
+              <span className="text-[9px] font-black text-emerald-100 uppercase tracking-widest mb-1">Efficiency</span>
               <span className="text-2xl font-black italic">{feeStats.percent.toFixed(0)}%</span>
+           </div>
+        </div>
+      </div>
+
+      {/* Primary Intelligence & Projection Layer */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-3">
+           <div 
+             className="rounded-[4rem] p-12 text-white shadow-2xl relative overflow-hidden h-full flex flex-col"
+             style={{ background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)` }}
+           >
+             <div className="relative z-10 flex flex-col md:flex-row items-center gap-12 mb-10">
+               <div className="w-24 h-24 rounded-[2rem] bg-white/10 backdrop-blur-3xl flex items-center justify-center shrink-0 border border-white/20">
+                 <svg className="w-12 h-12 text-indigo-200 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+               </div>
+               <div>
+                 <div className="flex items-center gap-3 mb-4">
+                   <span className="bg-emerald-400 text-slate-900 px-6 py-1.5 rounded-full text-[10px] font-black tracking-[0.2em] uppercase">AI Segment Insight</span>
+                 </div>
+                 <h3 className="text-4xl font-black leading-tight italic tracking-tight">"{insight}"</h3>
+               </div>
+             </div>
+             <div className="mt-auto h-48 w-full bg-white/5 backdrop-blur-md rounded-[2.5rem] p-8 border border-white/10 shadow-inner">
+                <p className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.4em] mb-4 text-center">Institutional Growth Projection (5YR)</p>
+                <ResponsiveContainer width="100%" height="100%">
+                   <AreaChart data={[
+                      { year: '2021', actual: 450 }, { year: '2022', actual: 520 }, { year: '2023', actual: 610 }, 
+                      { year: '2024', actual: 780 }, { year: '2025', actual: 850, projection: 850 }, 
+                      { year: '2026', projection: 1100 }, { year: '2027', projection: 1450 }
+                   ]}>
+                      <defs>
+                        <linearGradient id="colorProj" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#fff" stopOpacity={0.3}/><stop offset="95%" stopColor="#fff" stopOpacity={0}/></linearGradient>
+                      </defs>
+                      <Area type="monotone" dataKey="actual" stroke="#fff" strokeWidth={4} fill="url(#colorProj)" />
+                      <Area type="monotone" dataKey="projection" stroke="#6366f1" strokeWidth={4} strokeDasharray="10 10" fill="transparent" />
+                      <Tooltip contentStyle={{backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', fontSize: '10px'}} />
+                   </AreaChart>
+                </ResponsiveContainer>
+             </div>
+           </div>
+        </div>
+
+        <div className="space-y-8 flex flex-col">
+           <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col justify-center items-center text-center group hover:border-indigo-400 transition-all flex-1">
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Attendance Pulse</p>
+              <div className="relative mb-6">
+                 <svg className="w-36 h-36 transform -rotate-90">
+                    <circle cx="72" cy="72" r="64" stroke="currentColor" strokeWidth="14" fill="transparent" className="text-slate-50" />
+                    <circle cx="72" cy="72" r="64" stroke="currentColor" strokeWidth="14" fill="transparent" className="text-indigo-600 transition-all duration-1000" strokeDasharray={402} strokeDashoffset={402 - (402 * 94.2) / 100} strokeLinecap="round" />
+                 </svg>
+                 <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-3xl font-black text-slate-800">94%</span>
+                 </div>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Segment Efficiency</p>
+           </div>
+           
+           <div className="bg-indigo-600 p-10 rounded-[3rem] shadow-xl flex items-center justify-between text-white group cursor-pointer hover:bg-indigo-700 transition-all">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-1">Active Events</p>
+                <h4 className="text-3xl font-black italic tracking-tighter">12 Live</h4>
+              </div>
+              <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center">
+                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              </div>
            </div>
         </div>
       </div>
@@ -154,7 +235,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col h-[450px]">
            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-xl font-black text-slate-800 uppercase italic">Category Matrix</h3>
+              <h3 className="text-xl font-black text-slate-800 uppercase italic">Segment Composition</h3>
               <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm">
                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
               </div>
@@ -209,13 +290,13 @@ const Dashboard: React.FC<DashboardProps> = ({
               <svg className="w-48 h-48" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
            </div>
            <div className="relative z-10">
-              <h3 className="text-2xl font-black text-indigo-400 uppercase italic tracking-tight mb-2 leading-none">Fiscal Hub</h3>
-              <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Cross-Channel Realization</p>
+              <h3 className="text-2xl font-black text-indigo-400 uppercase italic tracking-tight mb-2 leading-none">Fiscal Health</h3>
+              <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Selected Segment Realization</p>
            </div>
            
            <div className="space-y-6 relative z-10">
               <div>
-                 <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">Gross Arrears</p>
+                 <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">Current Arrears</p>
                  <h2 className="text-5xl font-black text-rose-400 italic tracking-tighter">₹{(feeStats.outstanding/1000).toFixed(1)}k</h2>
               </div>
               <div className="h-4 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 p-1">
@@ -227,71 +308,6 @@ const Dashboard: React.FC<DashboardProps> = ({
               >
                 Audit Transaction Ledger
               </button>
-           </div>
-        </div>
-      </div>
-
-      {/* Primary Intelligence & Projection Layer */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-3">
-           <div 
-             className="rounded-[4rem] p-12 text-white shadow-2xl relative overflow-hidden h-full flex flex-col"
-             style={{ background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)` }}
-           >
-             <div className="relative z-10 flex flex-col md:flex-row items-center gap-12 mb-10">
-               <div className="w-24 h-24 rounded-[2rem] bg-white/10 backdrop-blur-3xl flex items-center justify-center shrink-0 border border-white/20">
-                 <svg className="w-12 h-12 text-indigo-200 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-               </div>
-               <div>
-                 <div className="flex items-center gap-3 mb-4">
-                   <span className="bg-emerald-400 text-slate-900 px-6 py-1.5 rounded-full text-[10px] font-black tracking-[0.2em] uppercase">AI Institutional Foresight</span>
-                 </div>
-                 <h3 className="text-4xl font-black leading-tight italic tracking-tight">"{insight}"</h3>
-               </div>
-             </div>
-             <div className="mt-auto h-48 w-full bg-white/5 backdrop-blur-md rounded-[2.5rem] p-8 border border-white/10 shadow-inner">
-                <p className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.4em] mb-4 text-center">Institutional Growth Projection (5YR)</p>
-                <ResponsiveContainer width="100%" height="100%">
-                   <AreaChart data={[
-                      { year: '2021', actual: 450 }, { year: '2022', actual: 520 }, { year: '2023', actual: 610 }, 
-                      { year: '2024', actual: 780 }, { year: '2025', actual: 850, projection: 850 }, 
-                      { year: '2026', projection: 1100 }, { year: '2027', projection: 1450 }
-                   ]}>
-                      <defs>
-                        <linearGradient id="colorProj" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#fff" stopOpacity={0.3}/><stop offset="95%" stopColor="#fff" stopOpacity={0}/></linearGradient>
-                      </defs>
-                      <Area type="monotone" dataKey="actual" stroke="#fff" strokeWidth={4} fill="url(#colorProj)" />
-                      <Area type="monotone" dataKey="projection" stroke="#6366f1" strokeWidth={4} strokeDasharray="10 10" fill="transparent" />
-                      <Tooltip contentStyle={{backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', fontSize: '10px'}} />
-                   </AreaChart>
-                </ResponsiveContainer>
-             </div>
-           </div>
-        </div>
-
-        <div className="space-y-8 flex flex-col">
-           <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col justify-center items-center text-center group hover:border-indigo-400 transition-all flex-1">
-              <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Attendance Pulse</p>
-              <div className="relative mb-6">
-                 <svg className="w-36 h-36 transform -rotate-90">
-                    <circle cx="72" cy="72" r="64" stroke="currentColor" strokeWidth="14" fill="transparent" className="text-slate-50" />
-                    <circle cx="72" cy="72" r="64" stroke="currentColor" strokeWidth="14" fill="transparent" className="text-indigo-600 transition-all duration-1000" strokeDasharray={402} strokeDashoffset={402 - (402 * 94.2) / 100} strokeLinecap="round" />
-                 </svg>
-                 <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-3xl font-black text-slate-800">94%</span>
-                 </div>
-              </div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Optimal Efficiency</p>
-           </div>
-           
-           <div className="bg-indigo-600 p-10 rounded-[3rem] shadow-xl flex items-center justify-between text-white group cursor-pointer hover:bg-indigo-700 transition-all">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-1">Active Events</p>
-                <h4 className="text-3xl font-black italic tracking-tighter">12 Live</h4>
-              </div>
-              <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center">
-                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-              </div>
            </div>
         </div>
       </div>
