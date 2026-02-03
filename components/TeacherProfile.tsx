@@ -44,6 +44,8 @@ const TeacherProfile: React.FC<TeacherProfileProps> = ({ teacher }) => {
                      <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 grid grid-cols-2 gap-4">
                         <div><p className="text-[8px] font-black text-slate-400 uppercase">Gender</p><p className="text-sm font-bold text-slate-800">{teacher.gender}</p></div>
                         <div><p className="text-[8px] font-black text-slate-400 uppercase">Blood Gr.</p><p className="text-sm font-bold text-slate-800">{teacher.bloodGroup}</p></div>
+                        <div><p className="text-[8px] font-black text-slate-400 uppercase">Religion</p><p className="text-sm font-bold text-slate-800">{teacher.religion === 'Other' ? teacher.otherReligion : teacher.religion}</p></div>
+                        <div><p className="text-[8px] font-black text-slate-400 uppercase">Category</p><p className="text-sm font-bold text-slate-800">{teacher.category}</p></div>
                         <div><p className="text-[8px] font-black text-slate-400 uppercase">DOB</p><p className="text-sm font-bold text-slate-800">{teacher.dob}</p></div>
                         <div><p className="text-[8px] font-black text-slate-400 uppercase">Status</p><p className="text-sm font-bold text-slate-800">{teacher.relationshipStatus}</p></div>
                      </div>

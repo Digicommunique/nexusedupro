@@ -16,6 +16,7 @@ const PayrollModule: React.FC<PayrollModuleProps> = ({ staff, settings, staffAtt
   const [activeTab, setActiveTab] = useState<'structures' | 'leaves' | 'process' | 'history'>('process');
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [isPaySlipOpen, setIsPaySlipOpen] = useState(false);
+  const [editingStructure, setEditingStructure] = useState<SalaryStructure | null>(null);
 
   // Configuration for Salary Structures
   const [structures, setStructures] = useState<SalaryStructure[]>([
@@ -78,9 +79,17 @@ const PayrollModule: React.FC<PayrollModuleProps> = ({ staff, settings, staffAtt
       if (existing) {
         return prev.map(s => s.role === role ? { ...s, basePay, hra, da, specialAllowance, paidLeaveLimit } : s);
       }
-      return [...prev, { id: `SS${prev.length + 1}`, role, basePay, hra, da, specialAllowance, paidLeaveLimit }];
+      return [...prev, { id: `SS${Date.now()}`, role, basePay, hra, da, specialAllowance, paidLeaveLimit }];
     });
-    alert('Salary Structure Committed');
+    
+    setEditingStructure(null);
+    alert('Salary Structure Updated Successfully');
+  };
+
+  const handleDeleteStructure = (id: string) => {
+    if (confirm('Are you sure you want to remove this salary grade?')) {
+      setStructures(structures.filter(s => s.id !== id));
+    }
   };
 
   const handleProcessSalary = (e: React.FormEvent<HTMLFormElement>) => {
@@ -114,7 +123,7 @@ const PayrollModule: React.FC<PayrollModuleProps> = ({ staff, settings, staffAtt
   const renderPaySlip = () => {
     if (!selectedInfo) return null;
     return (
-      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] flex items-center justify-center p-6">
         <div className="bg-white w-full max-w-3xl rounded-[3rem] shadow-2xl overflow-hidden p-16 animate-in zoom-in-95 duration-300 print:shadow-none print:w-full print:p-8">
            <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8 mb-10">
               <div>
@@ -250,28 +259,43 @@ const PayrollModule: React.FC<PayrollModuleProps> = ({ staff, settings, staffAtt
       {activeTab === 'structures' && (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1">
-            <form onSubmit={handleUpdateStructure}>
-              <FormSection title="Role Architect" description="Define pay bands & leave allowances.">
+            <form key={editingStructure?.id || 'new'} onSubmit={handleUpdateStructure}>
+              <FormSection title={editingStructure ? "Modify Grade" : "Role Architect"} description={editingStructure ? `Adjusting ${editingStructure.role}` : "Define pay bands & leave allowances."}>
                 <div className="lg:col-span-3 space-y-4">
-                  <Select label="Institutional Role" name="role" required options={ROLES.map(r => ({value: r, label: r}))} />
-                  <Input label="Base Pay (₹)" name="basePay" type="number" required />
+                  <Select label="Institutional Role" name="role" required defaultValue={editingStructure?.role} options={ROLES.map(r => ({value: r, label: r}))} />
+                  <Input label="Base Pay (₹)" name="basePay" type="number" required defaultValue={editingStructure?.basePay} />
                   <div className="grid grid-cols-2 gap-4">
-                     <Input label="HRA (₹)" name="hra" type="number" required />
-                     <Input label="DA (₹)" name="da" type="number" required />
+                     <Input label="HRA (₹)" name="hra" type="number" required defaultValue={editingStructure?.hra} />
+                     <Input label="DA (₹)" name="da" type="number" required defaultValue={editingStructure?.da} />
                   </div>
-                  <Input label="Special Allowance (₹)" name="specialAllowance" type="number" required />
-                  <Input label="Paid Leave Limit" name="paidLeaveLimit" type="number" required />
-                  <button type="submit" className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg">Commit Pay Band</button>
+                  <Input label="Special Allowance (₹)" name="specialAllowance" type="number" required defaultValue={editingStructure?.specialAllowance} />
+                  <Input label="Paid Leave Limit" name="paidLeaveLimit" type="number" required defaultValue={editingStructure?.paidLeaveLimit} />
+                  
+                  <div className="flex gap-2">
+                    <button type="submit" className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg">
+                      {editingStructure ? 'Update Grade' : 'Commit Grade'}
+                    </button>
+                    {editingStructure && (
+                      <button type="button" onClick={() => setEditingStructure(null)} className="px-6 py-4 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest">
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </div>
               </FormSection>
             </form>
           </div>
           <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
              {structures.map(s => (
-               <div key={s.id} className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm hover:border-indigo-300 transition-all flex flex-col group">
+               <div key={s.id} className={`bg-white p-8 rounded-[3rem] border shadow-sm transition-all flex flex-col group ${editingStructure?.id === s.id ? 'border-indigo-600 ring-4 ring-indigo-50 shadow-xl scale-[1.02]' : 'border-slate-200 hover:border-indigo-300'}`}>
                   <div className="flex justify-between items-start mb-6">
                      <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-[9px] font-black uppercase tracking-widest">{s.role}</span>
-                     <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-inner">₹</div>
+                     <div className="flex gap-2">
+                        <button onClick={() => handleDeleteStructure(s.id)} className="w-8 h-8 rounded-lg bg-rose-50 text-rose-400 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-sm">
+                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-inner font-black">₹</div>
+                     </div>
                   </div>
                   <div className="space-y-4 flex-1">
                      <div className="flex justify-between items-baseline">
@@ -289,7 +313,15 @@ const PayrollModule: React.FC<PayrollModuleProps> = ({ staff, settings, staffAtt
                         </div>
                      </div>
                   </div>
-                  <button className="mt-8 w-full py-2.5 bg-slate-50 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest group-hover:bg-indigo-600 group-hover:text-white transition-all">Adjust Structure</button>
+                  <button 
+                    onClick={() => {
+                      setEditingStructure(s);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={`mt-8 w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${editingStructure?.id === s.id ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white'}`}
+                  >
+                    Adjust Structure
+                  </button>
                </div>
              ))}
           </div>

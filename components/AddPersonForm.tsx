@@ -23,6 +23,7 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [generatedId, setGeneratedId] = useState<string>('');
   const [isClassTeacher, setIsClassTeacher] = useState<boolean>(false);
+  const [selectedReligion, setSelectedReligion] = useState<string>('');
 
   useEffect(() => {
     const getInitials = (str: string) => str.split(' ').map(s => s[0]).join('').toUpperCase().slice(0, 3);
@@ -54,7 +55,7 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center sticky top-0 bg-[#F4F5F7]/95 backdrop-blur-md py-6 z-20 border-b border-slate-200 gap-4">
         <div>
           <h2 className="text-3xl font-black text-slate-900 capitalize tracking-tight">Register {type}</h2>
-          <p className="text-slate-500 font-medium text-sm">Create a new institutional record for {settings.schoolName} ({settings.branchName}).</p>
+          <p className="text-slate-500 font-medium text-sm">Create a new institutional record for {settings.schoolName}.</p>
         </div>
         <div className="flex gap-4 w-full md:w-auto">
           <button
@@ -90,94 +91,27 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
               )}
               <input type="file" name="photo" onChange={handlePhotoChange} className="absolute inset-0 opacity-0 cursor-pointer" />
             </div>
-            <div 
-              className="absolute -bottom-2 -right-2 p-2 rounded-lg text-white shadow-lg pointer-events-none"
-              style={{ backgroundColor: COLORS.primary }}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
-            </div>
           </div>
           <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Attach Official Photograph</span>
         </div>
         
         <Input label="Full Name" name="name" required placeholder="Full legal name" />
         
-        {type === 'student' && (
+        {type === 'student' ? (
           <>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">
-                Student ID <span className="text-rose-500">*</span>
-              </label>
-              <input
-                name="studentId"
-                value={generatedId}
-                onChange={(e) => setGeneratedId(e.target.value)}
-                required
-                placeholder="Enter unique student identifier"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 outline-none transition-all text-sm font-medium"
-                style={{ '--tw-ring-color': COLORS.primary } as any}
-              />
-            </div>
-            <Select 
-              label="Grade" 
-              name="grade" 
-              required 
-              options={GRADES.map(g => ({value: g, label: g}))} 
-            />
-            <Select 
-              label="Section" 
-              name="section" 
-              required 
-              options={SECTIONS.map(s => ({value: s, label: s}))} 
-            />
+            <Input label="Student ID" name="studentId" defaultValue={generatedId} required />
+            <Select label="Grade" name="grade" required options={GRADES.map(g => ({value: g, label: g}))} />
+            <Select label="Section" name="section" required options={SECTIONS.map(s => ({value: s, label: s}))} />
           </>
-        )}
-
-        {type === 'staff' && (
+        ) : (
           <>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">
-                Staff ID <span className="text-rose-500">*</span>
-              </label>
-              <input
-                name="staffId"
-                value={generatedId}
-                onChange={(e) => setGeneratedId(e.target.value)}
-                required
-                placeholder="Enter unique staff identifier"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 outline-none transition-all text-sm font-medium"
-                style={{ '--tw-ring-color': COLORS.primary } as any}
-              />
-            </div>
-            <Select 
-              label="Role" 
-              name="role" 
-              required 
-              options={[
-                { value: 'Teacher', label: 'Teacher' },
-                { value: 'Principal', label: 'Principal' },
-                { value: 'Coordinator', label: 'Coordinator' },
-                { value: 'Non-Teaching Staff', label: 'Non-Teaching Staff' }
-              ]} 
-            />
-            <div className="space-y-4 col-span-1 lg:col-span-3 p-6 bg-slate-50 rounded-2xl border border-slate-200">
-               <div className="flex items-center gap-3">
-                  <input 
-                    type="checkbox" 
-                    id="classTeacherCheck"
-                    checked={isClassTeacher} 
-                    onChange={(e) => setIsClassTeacher(e.target.checked)} 
-                    className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <label htmlFor="classTeacherCheck" className="text-sm font-black text-slate-800 uppercase tracking-tight">Appoint as Class Teacher</label>
-               </div>
-               {isClassTeacher && (
-                 <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
-                    <Select label="Assigned Grade" name="assignedGrade" required options={GRADES.map(g => ({value: g, label: g}))} />
-                    <Select label="Assigned Section" name="assignedSection" required options={SECTIONS.map(s => ({value: s, label: s}))} />
-                 </div>
-               )}
-            </div>
+            <Input label="Staff ID" name="staffId" defaultValue={generatedId} required />
+            <Select label="Role" name="role" required options={[
+              { value: 'Teacher', label: 'Teacher' },
+              { value: 'Principal', label: 'Principal' },
+              { value: 'Accountant', label: 'Accountant' },
+              { value: 'Librarian', label: 'Librarian' }
+            ]} />
           </>
         )}
 
@@ -194,86 +128,98 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
           required 
           options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => ({value: bg, label: bg}))} 
         />
+
+        <div className="lg:col-span-3 bg-indigo-50/30 p-8 rounded-[2rem] border border-indigo-100 mt-4">
+           <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-6">Demographic Profile</p>
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Select 
+                label="Religion" 
+                name="religion" 
+                required 
+                onSelect={(val) => setSelectedReligion(val)}
+                options={[
+                  {value: 'Hindu', label: 'Hindu'},
+                  {value: 'Islam', label: 'Islam'},
+                  {value: 'Sikh', label: 'Sikh'},
+                  {value: 'Christian', label: 'Christian'},
+                  {value: 'Jain', label: 'Jain'},
+                  {value: 'Jews', label: 'Jews'},
+                  {value: 'Buddhism', label: 'Buddhism'},
+                  {value: 'Zorastians', label: 'Zorastians'},
+                  {value: 'Other', label: 'Other (Specify)'}
+                ]} 
+              />
+              {selectedReligion === 'Other' && (
+                <Input label="Mention Religion" name="otherReligion" required placeholder="Specify religion" />
+              )}
+              <Input label="Caste" name="caste" required placeholder="Enter caste" />
+              <Select 
+                label="Category" 
+                name="category" 
+                required 
+                options={[
+                  {value: 'General', label: 'General'},
+                  {value: 'OBC', label: 'OBC'},
+                  {value: 'SC', label: 'SC'},
+                  {value: 'ST', label: 'ST'},
+                  {value: 'Others', label: 'Others'}
+                ]} 
+              />
+           </div>
+        </div>
+
         <Select 
           label="Relationship Status" 
           name="relationshipStatus" 
           required 
-          options={[
-            {value: 'Single', label: 'Single'}, 
-            {value: 'Married', label: 'Married'},
-            {value: 'Divorced', label: 'Divorced'}
-          ]} 
+          options={[{value: 'Single', label: 'Single'}, {value: 'Married', label: 'Married'}]} 
         />
-        <Input label="Allergies" name="allergy" placeholder="Any medical concerns?" />
-        <FileUpload label="Identification Document" name="idDocument" required />
+        <Input label="Medical Allergies" name="allergy" placeholder="Any medical concerns?" />
+        <FileUpload label="Upload Identification (PDF/JPG)" name="idDocument" required />
         <div className="lg:col-span-2">
           <Input label="Current Residence" name="address" required placeholder="Permanent residential address" />
         </div>
       </FormSection>
 
-      {type === 'staff' && (
-        <>
-          <FormSection title="Academic Credentials" description="Educational background and valid documents">
-            <div className="lg:col-span-2">
-              <Input label="Qualification" name="qualification" required placeholder="e.g., M.Sc in Mathematics, PhD in Education" />
-            </div>
-            <FileUpload label="Degree Certificate" name="degreeDoc" required />
-            <FileUpload label="Marksheets (Consolidated)" name="marksheetDoc" required />
-            <FileUpload label="Highest Degree Document" name="highestDegreeDoc" required />
-          </FormSection>
-
-          <FormSection title="Bank Settlement Details" description="Payroll and financial routing info">
-            <Input label="Bank Institution" name="bankName" required placeholder="e.g. Standard Chartered" />
-            <Input label="IFSC / Routing Code" name="ifscCode" required placeholder="Bank routing code" />
-            <Input label="Account Number" name="accountNumber" required placeholder="Full bank account digits" />
-          </FormSection>
-        </>
-      )}
-
-      <FormSection title="Father's Profile" description="Family background details">
-        <Input label="Father's Name" name="fatherName" required />
-        <Input label="Occupation" name="fatherOccupation" required />
-        <Input label="Contact Number" name="fatherContact" required />
-        <FileUpload label="Upload ID Document" name="fatherIdDoc" required />
-        <div className="lg:col-span-2">
-          <Input label="Workplace Address" name="fatherOccupationAddress" required />
+      <FormSection title="Parental / Guardian Profile" description="Family background and emergency contacts">
+        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100">
+           <div className="space-y-6">
+              <h4 className="text-sm font-black text-slate-900 uppercase italic">Father's Details</h4>
+              <Input label="Name" name="fatherName" required />
+              <Input label="Occupation" name="fatherOccupation" required />
+              <Input label="Contact #" name="fatherContact" required />
+              <FileUpload label="Father's ID Proof" name="fatherIdDoc" required />
+              <Input label="Office Address" name="fatherOccupationAddress" required />
+           </div>
+           <div className="space-y-6">
+              <h4 className="text-sm font-black text-slate-900 uppercase italic">Mother's Details</h4>
+              <Input label="Name" name="motherName" required />
+              <Input label="Occupation" name="motherOccupation" required />
+              <Input label="Contact #" name="motherContact" required />
+              <FileUpload label="Mother's ID Proof" name="motherIdDoc" required />
+              <Input label="Office Address" name="motherOccupationAddress" required />
+           </div>
+        </div>
+        
+        <div className="lg:col-span-3 mt-8">
+           <h4 className="text-sm font-black text-slate-900 uppercase italic mb-6">Local Guardianship (Emergency)</h4>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Input label="Guardian Name" name="guardianName" required />
+              <Input label="Relationship" name="guardianRelationship" required />
+              <Input label="Contact Number" name="guardianContact" required />
+              <div className="md:col-span-3">
+                 <Input label="Guardian Address" name="guardianAddress" required />
+              </div>
+           </div>
         </div>
       </FormSection>
 
-      <FormSection title="Mother's Profile" description="Family background details">
-        <Input label="Mother's Name" name="motherName" required />
-        <Input label="Occupation" name="motherOccupation" required />
-        <Input label="Contact Number" name="motherContact" required />
-        <FileUpload label="Upload ID Document" name="motherIdDoc" required />
-        <div className="lg:col-span-2">
-          <Input label="Workplace Address" name="motherOccupationAddress" required />
+      <FormSection title="Institutional Validation" description="Final verification and signatures">
+        <div className="lg:col-span-3 p-8 bg-white border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center text-center space-y-4">
+           <FileUpload label="Upload Parents/Guardian Signature" name="parentSignature" required />
+           <p className="text-[10px] font-bold text-slate-400 max-w-lg">I hereby confirm that all information provided is accurate and represents official institutional data for registration.</p>
         </div>
       </FormSection>
-
-      <FormSection title="Local Guardianship" description="Authorized local contact">
-        <Input label="Guardian Name" name="guardianName" required />
-        <Input label="Relationship" name="guardianRelationship" required placeholder="Legal relation" />
-        <Input label="Contact Number" name="guardianContact" required />
-        <div className="lg:col-span-3">
-          <Input label="Full Address" name="guardianAddress" required />
-        </div>
-      </FormSection>
-
-      {type === 'student' && (
-        <FormSection title="Legal Authorization" description="Digital signatures and validation">
-          <div className="lg:col-span-3 p-6 bg-slate-50 rounded-xl border border-slate-200">
-            <FileUpload label="Parents Digital Signature" name="parentSignature" required />
-            <div className="flex gap-3 mt-4 items-start">
-               <div className="w-5 h-5 mt-0.5 rounded flex items-center justify-center shrink-0" style={{ backgroundColor: COLORS.accent }}>
-                 <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
-               </div>
-               <p className="text-xs text-slate-500 font-medium">
-                 I hereby certify that the information provided is accurate. The digital signature uploaded represents legal consent for institutional registration.
-               </p>
-            </div>
-          </div>
-        </FormSection>
-      )}
     </form>
   );
 };

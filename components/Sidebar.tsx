@@ -25,6 +25,9 @@ const Sidebar: React.FC<SidebarProps> = ({ active, onSelect, userRole }) => {
     { id: 'attendance', label: 'Attendance Hub', icon: Icons.Attendance },
     { id: 'examination', label: 'Examination Control', icon: Icons.Examination },
     { id: 'fees', label: 'Fees & Accounts', icon: Icons.Fees },
+    { id: 'accounts', label: 'Accounts Ledger', icon: Icons.Plus },
+    { id: 'assets', label: 'Asset Management', icon: Icons.Labs },
+    { id: 'financial_report', label: 'Financial Matrix', icon: Icons.Plus },
     { id: 'payroll', label: 'Payroll & HR', icon: Icons.Briefcase },
     { id: 'library', label: 'Library Module', icon: Icons.Library },
     { id: 'labs', label: 'Laboratory Hub', icon: Icons.Labs },
@@ -55,6 +58,8 @@ const Sidebar: React.FC<SidebarProps> = ({ active, onSelect, userRole }) => {
 
   const accountantItems: { id: NavItem; label: string; icon: React.ComponentType }[] = [
     { id: 'fees', label: 'Fees & Accounts', icon: Icons.Fees },
+    { id: 'accounts', label: 'Institutional Ledger', icon: Icons.Plus },
+    { id: 'financial_report', label: 'Fiscal Analytics', icon: Icons.Plus },
   ];
 
   const receptionistItems: { id: NavItem; label: string; icon: React.ComponentType }[] = [
