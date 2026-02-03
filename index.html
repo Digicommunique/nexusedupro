@@ -27,6 +27,10 @@
         background: #cbd5e1;
       }
     </style>
+    <script>
+      // Polyfill for process.env to prevent ReferenceErrors in the browser
+      window.process = window.process || { env: {} };
+    </script>
   <script type="importmap">
 {
   "imports": {
@@ -41,5 +45,7 @@
 </head>
   <body>
     <div id="root"></div>
+    <!-- The missing script tag that actually starts the application -->
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
