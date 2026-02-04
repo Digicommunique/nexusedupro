@@ -23,7 +23,6 @@ const SECTIONS = ['A', 'B', 'C', 'D', 'E'];
 const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, initialData, onCancel, onSubmit }) => {
   const [photoPreview, setPhotoPreview] = useState<string | null>(initialData?.photo || null);
   const [generatedId, setGeneratedId] = useState<string>(initialData?.id || '');
-  const [isClassTeacher, setIsClassTeacher] = useState<boolean>(initialData?.isClassTeacher || false);
   const [selectedReligion, setSelectedReligion] = useState<string>(initialData?.religion || '');
 
   useEffect(() => {
@@ -50,68 +49,74 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, initialDa
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
-    onSubmit({ ...data, photo: photoPreview, isClassTeacher });
+    onSubmit({ ...data, photo: photoPreview });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 pb-12 max-w-5xl mx-auto animate-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center sticky top-0 bg-[#F4F5F7]/95 backdrop-blur-md py-6 z-20 border-b border-slate-200 gap-4">
+      {/* Dynamic Action Bar */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center sticky top-0 bg-slate-50/90 backdrop-blur-md py-6 z-20 border-b border-slate-200 gap-4 px-4 rounded-b-3xl">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 capitalize tracking-tight">
-            {initialData ? `Update ${type} Profile` : `Register ${type}`}
+          <h2 className="text-3xl font-black text-slate-900 capitalize tracking-tight flex items-center gap-3">
+             <div className="w-2 h-8 rounded-full bg-indigo-600"></div>
+            {initialData ? `Update ${type} Profile` : `Enroll New ${type}`}
           </h2>
-          <p className="text-slate-500 font-medium text-sm">Institutional data management for {settings.schoolName}.</p>
+          <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">Institutional Node: {settings.schoolName}</p>
         </div>
         <div className="flex gap-4 w-full md:w-auto">
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 md:flex-none px-8 py-3 rounded-xl border-2 border-slate-300 text-slate-600 font-bold hover:bg-white transition-all"
+            className="flex-1 md:flex-none px-8 py-3 rounded-2xl border-2 border-slate-200 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:bg-white hover:text-slate-900 transition-all"
           >
             Discard
           </button>
           <button
             type="submit"
-            className="flex-1 md:flex-none px-8 py-3 rounded-xl text-white font-black shadow-xl transition-all hover:brightness-110 active:scale-95"
-            style={{ backgroundColor: COLORS.primary, boxShadow: `0 10px 15px -3px ${COLORS.primary}40` }}
+            className="flex-1 md:flex-none px-10 py-3 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95"
+            style={{ backgroundColor: COLORS.primary, boxShadow: `0 15px 30px -5px ${COLORS.primary}40` }}
           >
-            {initialData ? 'Update Record' : 'Confirm & Save'}
+            {initialData ? 'Sync Updates' : 'Authorize Enrollment'}
           </button>
         </div>
       </div>
 
-      <FormSection title="Core Information" description="Identity and personal identifiers">
-        <div className="col-span-1 lg:col-span-3 flex flex-col items-center justify-center p-8 border-2 border-dashed border-indigo-100 rounded-2xl bg-white space-y-4">
-          <div className="relative group">
+      {/* CORE IDENTITY SECTION (As Requested: Photo, Name, Gender, DOB, Address) */}
+      <FormSection title="Student Identity Profile" description="Primary identification and bio-metrics for the central repository.">
+        <div className="col-span-1 lg:col-span-3 flex flex-col items-center justify-center p-8 border-2 border-dashed border-indigo-100 rounded-[3rem] bg-white space-y-4 group">
+          <div className="relative">
             <div 
-              className="w-36 h-36 rounded-2xl overflow-hidden border-4 border-slate-50 bg-slate-50 shadow-inner flex items-center justify-center transition-transform group-hover:scale-105"
-              style={{ borderColor: photoPreview ? COLORS.primary : '#f1f5f9' }}
+              className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-8 border-slate-50 bg-slate-50 shadow-2xl flex items-center justify-center transition-all group-hover:rotate-3 group-hover:scale-105"
+              style={{ borderColor: photoPreview ? COLORS.primary : '#f8fafc' }}
             >
               {photoPreview ? (
                 <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
               ) : (
-                <div className="text-slate-300">
-                  <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <div className="text-slate-200">
+                  <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                 </div>
               )}
-              <input type="file" name="photo_file" onChange={handlePhotoChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+              <input type="file" name="photo_file" onChange={handlePhotoChange} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+            </div>
+            <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl">
+               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             </div>
           </div>
-          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Attach Official Photograph</span>
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Attach Official Portrait</span>
         </div>
         
-        <Input label="Full Name" name="name" required placeholder="Full legal name" defaultValue={initialData?.name} />
+        <Input label="Student Full Name" name="name" required placeholder="Full legal name" defaultValue={initialData?.name} />
         
         {type === 'student' ? (
           <>
-            <Input label="Student ID" name="studentId" defaultValue={initialData?.studentId || generatedId} required />
-            <Select label="Grade" name="grade" defaultValue={initialData?.grade} required options={GRADES.map(g => ({value: g, label: g}))} />
-            <Select label="Section" name="section" defaultValue={initialData?.section} required options={SECTIONS.map(s => ({value: s, label: s}))} />
+            <Input label="Institutional ID" name="studentId" defaultValue={initialData?.studentId || generatedId} required />
+            <Select label="Assigned Grade" name="grade" defaultValue={initialData?.grade} required options={GRADES.map(g => ({value: g, label: g}))} />
+            <Select label="Section" name="section" defaultValue={initialData?.section} required options={SECTIONS.map(s => ({value: s, label: `Section ${s}`}))} />
           </>
         ) : (
           <>
             <Input label="Staff ID" name="staffId" defaultValue={initialData?.staffId || generatedId} required />
-            <Select label="Role" name="role" defaultValue={initialData?.role} required options={[
+            <Select label="System Role" name="role" defaultValue={initialData?.role} required options={[
               { value: 'Teacher', label: 'Teacher' },
               { value: 'Principal', label: 'Principal' },
               { value: 'Accountant', label: 'Accountant' },
@@ -136,9 +141,42 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, initialDa
           options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => ({value: bg, label: bg}))} 
         />
 
-        <div className="lg:col-span-3 bg-indigo-50/30 p-8 rounded-[2rem] border border-indigo-100 mt-4">
-           <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-6">Demographic Profile</p>
-           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="lg:col-span-3 mt-4">
+          <Input label="Residential Address" name="address" required placeholder="Permanent physical address for correspondence" defaultValue={initialData?.address} />
+        </div>
+      </FormSection>
+
+      {/* PARENTAL RECORD SECTION (As Requested: Father's Name) */}
+      <FormSection title="Guardian Matrix" description="Parental information and emergency contact links.">
+        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50/50 p-8 rounded-[3rem] border border-slate-100">
+           <div className="space-y-6">
+              <div className="flex items-center gap-3 mb-2">
+                 <div className="w-1.5 h-6 bg-indigo-400 rounded-full"></div>
+                 <h4 className="text-sm font-black text-slate-900 uppercase italic">Father's Master Record</h4>
+              </div>
+              <Input label="Father's Full Name" name="fatherName" required defaultValue={initialData?.fatherName} />
+              <Input label="Occupation" name="fatherOccupation" required defaultValue={initialData?.fatherOccupation} />
+              <Input label="Contact Number" name="fatherContact" required defaultValue={initialData?.fatherContact} placeholder="10 Digit Mobile" />
+              <FileUpload label="Father's ID Verification" name="fatherIdDoc" />
+              <Input label="Office / Work Address" name="fatherOccupationAddress" required defaultValue={initialData?.fatherOccupationAddress} />
+           </div>
+           
+           <div className="space-y-6">
+              <div className="flex items-center gap-3 mb-2">
+                 <div className="w-1.5 h-6 bg-pink-400 rounded-full"></div>
+                 <h4 className="text-sm font-black text-slate-900 uppercase italic">Mother's Master Record</h4>
+              </div>
+              <Input label="Mother's Full Name" name="motherName" required defaultValue={initialData?.motherName} />
+              <Input label="Occupation" name="motherOccupation" required defaultValue={initialData?.motherOccupation} />
+              <Input label="Contact Number" name="motherContact" required defaultValue={initialData?.motherContact} />
+              <FileUpload label="Mother's ID Verification" name="motherIdDoc" />
+              <Input label="Office / Work Address" name="motherOccupationAddress" required defaultValue={initialData?.motherOccupationAddress} />
+           </div>
+        </div>
+
+        <div className="lg:col-span-3 p-8 bg-white border border-slate-200 rounded-[2.5rem] mt-4 shadow-sm">
+           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8">Demographic Indices</p>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Select 
                 label="Religion" 
                 name="religion" 
@@ -146,92 +184,35 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, initialDa
                 defaultValue={initialData?.religion}
                 onSelect={(val) => setSelectedReligion(val)}
                 options={[
-                  {value: 'Hindu', label: 'Hindu'},
-                  {value: 'Islam', label: 'Islam'},
-                  {value: 'Sikh', label: 'Sikh'},
-                  {value: 'Christian', label: 'Christian'},
-                  {value: 'Jain', label: 'Jain'},
-                  {value: 'Jews', label: 'Jews'},
-                  {value: 'Buddhism', label: 'Buddhism'},
-                  {value: 'Zorastians', label: 'Zorastians'},
+                  {value: 'Hindu', label: 'Hindu'}, {value: 'Islam', label: 'Islam'}, {value: 'Sikh', label: 'Sikh'},
+                  {value: 'Christian', label: 'Christian'}, {value: 'Jain', label: 'Jain'}, {value: 'Buddhism', label: 'Buddhism'},
                   {value: 'Other', label: 'Other (Specify)'}
                 ]} 
               />
-              {selectedReligion === 'Other' && (
-                <Input label="Mention Religion" name="otherReligion" required placeholder="Specify religion" defaultValue={initialData?.otherReligion} />
-              )}
               <Input label="Caste" name="caste" required placeholder="Enter caste" defaultValue={initialData?.caste} />
               <Select 
                 label="Category" 
                 name="category" 
                 required 
                 defaultValue={initialData?.category}
-                options={[
-                  {value: 'General', label: 'General'},
-                  {value: 'OBC', label: 'OBC'},
-                  {value: 'SC', label: 'SC'},
-                  {value: 'ST', label: 'ST'},
-                  {value: 'Others', label: 'Others'}
-                ]} 
+                options={[{value: 'General', label: 'General'}, {value: 'OBC', label: 'OBC'}, {value: 'SC', label: 'SC'}, {value: 'ST', label: 'ST'}]} 
               />
            </div>
         </div>
-
-        {/* Removed Relationship Status from Student Form as per request */}
-        {type === 'staff' && (
-          <Select 
-            label="Relationship Status" 
-            name="relationshipStatus" 
-            required 
-            defaultValue={initialData?.relationshipStatus}
-            options={[{value: 'Single', label: 'Single'}, {value: 'Married', label: 'Married'}]} 
-          />
-        )}
-        
-        <Input label="Medical Allergies" name="allergy" placeholder="Any medical concerns?" defaultValue={initialData?.allergy} />
-        <FileUpload label="Upload Identification (PDF/JPG)" name="idDocument" required={!initialData} />
-        <div className="lg:col-span-2">
-          <Input label="Current Residence" name="address" required placeholder="Permanent residential address" defaultValue={initialData?.address} />
-        </div>
       </FormSection>
 
-      <FormSection title="Parental / Guardian Profile" description="Family background and emergency contacts">
-        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100">
-           <div className="space-y-6">
-              <h4 className="text-sm font-black text-slate-900 uppercase italic">Father's Details</h4>
-              <Input label="Name" name="fatherName" required defaultValue={initialData?.fatherName} />
-              <Input label="Occupation" name="fatherOccupation" required defaultValue={initialData?.fatherOccupation} />
-              <Input label="Contact #" name="fatherContact" required defaultValue={initialData?.fatherContact} />
-              <FileUpload label="Father's ID Proof" name="fatherIdDoc" required={!initialData} />
-              <Input label="Office Address" name="fatherOccupationAddress" required defaultValue={initialData?.fatherOccupationAddress} />
+      <FormSection title="Authorization & Consent" description="Final legal verification by the guardian.">
+        <div className="lg:col-span-3 p-10 bg-slate-900 rounded-[4rem] text-white flex flex-col md:flex-row items-center gap-10 relative overflow-hidden shadow-2xl">
+           <div className="absolute top-0 right-0 p-8 opacity-5">
+              <svg className="w-48 h-48" fill="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
            </div>
-           <div className="space-y-6">
-              <h4 className="text-sm font-black text-slate-900 uppercase italic">Mother's Details</h4>
-              <Input label="Name" name="motherName" required defaultValue={initialData?.motherName} />
-              <Input label="Occupation" name="motherOccupation" required defaultValue={initialData?.motherOccupation} />
-              <Input label="Contact #" name="motherContact" required defaultValue={initialData?.motherContact} />
-              <FileUpload label="Mother's ID Proof" name="motherIdDoc" required={!initialData} />
-              <Input label="Office Address" name="motherOccupationAddress" required defaultValue={initialData?.motherOccupationAddress} />
+           <div className="flex-1">
+              <h4 className="text-xl font-black uppercase italic tracking-tight mb-2">Consent to Enroll</h4>
+              <p className="text-xs font-bold text-white/40 uppercase tracking-widest leading-relaxed">I hereby confirm that all information provided for this student record is accurate and represents the official legal status of the resident.</p>
            </div>
-        </div>
-        
-        <div className="lg:col-span-3 mt-8">
-           <h4 className="text-sm font-black text-slate-900 uppercase italic mb-6">Local Guardianship (Emergency)</h4>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Input label="Guardian Name" name="guardianName" required defaultValue={initialData?.guardianName} />
-              <Input label="Relationship" name="guardianRelationship" required defaultValue={initialData?.guardianRelationship} />
-              <Input label="Contact Number" name="guardianContact" required defaultValue={initialData?.guardianContact} />
-              <div className="md:col-span-3">
-                 <Input label="Guardian Address" name="guardianAddress" required defaultValue={initialData?.guardianAddress} />
-              </div>
+           <div className="w-full md:w-auto shrink-0">
+              <FileUpload label="Authorized Digital Signature" name="parentSignature" required={!initialData} />
            </div>
-        </div>
-      </FormSection>
-
-      <FormSection title="Institutional Validation" description="Final verification and signatures">
-        <div className="lg:col-span-3 p-8 bg-white border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center text-center space-y-4">
-           <FileUpload label="Upload Parents/Guardian Signature" name="parentSignature" required={!initialData} />
-           <p className="text-[10px] font-bold text-slate-400 max-w-lg">I hereby confirm that all information provided is accurate and represents official institutional data for registration.</p>
         </div>
       </FormSection>
     </form>
