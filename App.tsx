@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ListView from './components/ListView';
@@ -30,6 +30,7 @@ import TeacherMessages from './components/TeacherMessages';
 import HomeworkModule from './components/HomeworkModule';
 import ParentPortal from './components/ParentPortal';
 import { COLORS } from './constants';
+import { supabase } from './supabaseClient';
 import { 
   NavItem, Student, Staff, AppSettings, HostelRoom, HostelAllotment, Asset,
   TransportRoute, TransportAssignment, IssuedBook, DamageReport, StaffAttendance, Notice, Examination,
@@ -42,7 +43,9 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavItem>('dashboard');
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   
+  // Settings State
   const [settings, setSettings] = useState<AppSettings>({
     schoolName: 'EduNexus Academy',
     branchName: 'Main Campus',
@@ -50,73 +53,81 @@ const App: React.FC = () => {
     logo: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&q=80&w=200',
   });
   
-  // Dynamic States for CRUD
-  const [students, setStudents] = useState<Student[]>([
-    { id: 'S1', name: 'Aarav Sharma', gender: 'Male', dob: '2010-05-12', address: '123 Tech Lane, Bangalore', bloodGroup: 'A+', studentId: 'EDU-MAIN-STU-X8Z2', grade: 'Class 10', section: 'A', fatherName: 'Rajesh Sharma', fatherOccupation: 'Engineer', fatherOccupationAddress: 'Tech Park', fatherContact: '9876543210', guardianName: 'Rajesh Sharma', guardianRelationship: 'Father', guardianAddress: '123 Tech Lane', guardianContact: '9876543210', motherName: 'Sunita Sharma', motherOccupation: 'Teacher', motherOccupationAddress: 'Sector 4', motherContact: '9876543211', transportRouteId: 'R1' },
-    { id: 'S2', name: 'Isha Patel', gender: 'Female', dob: '2011-03-14', address: '456 Garden View, Bangalore', bloodGroup: 'B+', studentId: 'EDU-MAIN-STU-Y9P3', grade: 'Class 10', section: 'A', fatherName: 'Manish Patel', fatherOccupation: 'Doctor', fatherOccupationAddress: 'Apollo', fatherContact: '9988776655', guardianName: 'Manish Patel', guardianRelationship: 'Father', guardianAddress: 'Garden View', guardianContact: '9988776655', motherName: 'Kavita Patel', motherOccupation: 'Artist', motherOccupationAddress: 'Home', motherContact: '9988776656' }
-  ]);
+  // Entities State
+  const [students, setStudents] = useState<Student[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [feeReceipts, setFeeReceipts] = useState<FeeReceipt[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
 
-  const [staff, setStaff] = useState<Staff[]>([
-    { 
-      id: 'T1', 
-      name: 'Dr. Anjali Verma', 
-      gender: 'Female', 
-      dob: '1985-08-22', 
-      address: 'Mumbai', 
-      bloodGroup: 'B-', 
-      staffId: 'EDU-MAIN-STF-P9K1', 
-      role: 'Teacher', 
-      relationshipStatus: 'Married', 
-      qualification: 'PhD', 
-      bankName: 'HDFC', 
-      ifscCode: 'HDFC001', 
-      accountNumber: '123', 
-      joiningDate: '2020-01-15', 
-      assignedGrade: 'Class 10', 
-      assignedSection: 'A', 
-      isClassTeacher: true,
-      fatherName: 'Late Suresh Verma',
-      fatherOccupation: 'Retired Professor',
-      fatherOccupationAddress: 'Delhi North Campus',
-      fatherContact: '0000000000',
-      motherName: 'Meena Verma',
-      motherOccupation: 'Homemaker',
-      motherOccupationAddress: 'Mumbai Residency',
-      motherContact: '0000000000',
-      guardianName: 'Suresh Verma',
-      guardianRelationship: 'Father',
-      guardianAddress: 'Mumbai Main Street',
-      guardianContact: '0000000000',
-      password: 'admin'
-    }
-  ]);
+  // Static/Partial states for remaining modules (simulated for now)
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [hostelAllotments] = useState<HostelAllotment[]>([]);
+  const [exams] = useState<Examination[]>([]);
+  const [feeRecords] = useState<StudentFeeRecord[]>([]);
 
-  const [feeReceipts, setFeeReceipts] = useState<FeeReceipt[]>([
-    { id: 'R1', receiptNo: 'EN-882X1', studentId: 'S1', studentName: 'Aarav Sharma', grade: 'Class 10', section: 'A', amountPaid: 5000, discount: 0, penalty: 0, paymentDate: new Date().toISOString().split('T')[0], paymentMethod: 'UPI', session: '2025-26', description: 'Term 1 Tuition' },
-    { id: 'R2', receiptNo: 'EN-99K21', studentId: 'S2', studentName: 'Isha Patel', grade: 'Class 10', section: 'A', amountPaid: 5300, discount: 0, penalty: 0, paymentDate: '2025-02-15', paymentMethod: 'Cash', session: '2025-26', description: 'Annual Charges' }
-  ]);
+  // 1. DATA SYNC & REALTIME SUBSCRIPTIONS
+  useEffect(() => {
+    const syncInstitutionalData = async () => {
+      setIsLoading(true);
+      try {
+        const [sets, stus, stf, recs, nts] = await Promise.all([
+          supabase.from('app_settings').select('*').maybeSingle(),
+          supabase.from('students').select('*').order('created_at', { ascending: false }),
+          supabase.from('staff').select('*').order('created_at', { ascending: false }),
+          supabase.from('fee_receipts').select('*').order('created_at', { ascending: false }),
+          supabase.from('notices').select('*').order('created_at', { ascending: false }),
+        ]);
 
-  const [assets, setAssets] = useState<Asset[]>([
-    { id: 'AST1', name: 'Nexus Workstation i9', category: 'Electronics', purchaseDate: '2025-01-10', cost: 85000, serialNumber: 'NX-9982', location: 'Admin Room 1', status: 'Operational', description: 'Main admin server station' }
-  ]);
+        if (sets.data) setSettings(sets.data);
+        if (stus.data) setStudents(stus.data as any);
+        if (stf.data) setStaff(stf.data as any);
+        if (recs.data) setFeeReceipts(recs.data as any);
+        if (nts.data) setNotices(nts.data as any);
+      } catch (error) {
+        console.error("Critical Sync Error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const [payrollHistory, setPayrollHistory] = useState<PayrollRecord[]>([]);
-  const [hostelAllotments] = useState<HostelAllotment[]>([
-    { id: 'A1', studentId: 'S1', studentName: 'Aarav Sharma', hostelId: 'H1', roomId: 'HR1', allotmentDate: '2025-01-01', feeStatus: 'Paid' }
-  ]);
+    syncInstitutionalData();
 
-  const [notices, setNotices] = useState<Notice[]>([
-    { id: 'N1', title: 'Founders Day 2025', content: 'Celebration at main auditorium.', senderRole: 'Director', senderName: 'Mr. S.P. Singhania', date: '10 Feb 2025', targetAudience: ['Teacher', 'Non-Teaching Staff', 'Parent', 'Public'], priority: 'High' }
-  ]);
+    // SETUP REALTIME CHANNELS
+    const studentChannel = supabase.channel('realtime_students').on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, (payload) => {
+        if (payload.eventType === 'INSERT') setStudents(prev => [payload.new as any, ...prev]);
+        if (payload.eventType === 'UPDATE') setStudents(prev => prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s));
+        if (payload.eventType === 'DELETE') setStudents(prev => prev.filter(s => s.id !== payload.old.id));
+    }).subscribe();
 
-  const [exams] = useState<Examination[]>([
-    { id: 'E1', title: 'Final Exam 2025', grade: 'Class 10', section: 'A', subject: 'Mathematics', date: '2025-03-15', totalMarks: 100, isResultDeclared: false }
-  ]);
+    const staffChannel = supabase.channel('realtime_staff').on('postgres_changes', { event: '*', schema: 'public', table: 'staff' }, (payload) => {
+        if (payload.eventType === 'INSERT') setStaff(prev => [payload.new as any, ...prev]);
+        if (payload.eventType === 'UPDATE') setStaff(prev => prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s));
+        if (payload.eventType === 'DELETE') setStaff(prev => prev.filter(s => s.id !== payload.old.id));
+    }).subscribe();
 
-  const [feeRecords] = useState<StudentFeeRecord[]>([
-    { id: 'FR1', studentId: 'S1', totalAmount: 15800, discount: 0, paidAmount: 5000, dueDate: '2025-03-05', status: 'Partial' },
-    { id: 'FR2', studentId: 'S2', totalAmount: 5800, discount: 500, paidAmount: 5300, dueDate: '2025-03-05', status: 'Paid' }
-  ]);
+    const noticeChannel = supabase.channel('realtime_notices').on('postgres_changes', { event: '*', schema: 'public', table: 'notices' }, (payload) => {
+        if (payload.eventType === 'INSERT') setNotices(prev => [payload.new as any, ...prev]);
+        if (payload.eventType === 'UPDATE') setNotices(prev => prev.map(n => n.id === payload.new.id ? { ...n, ...payload.new } : n));
+        if (payload.eventType === 'DELETE') setNotices(prev => prev.filter(n => n.id !== payload.old.id));
+    }).subscribe();
+
+    const settingsChannel = supabase.channel('realtime_settings').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_settings' }, (payload) => {
+        setSettings(payload.new as AppSettings);
+    }).subscribe();
+
+    const feesChannel = supabase.channel('realtime_fees').on('postgres_changes', { event: '*', schema: 'public', table: 'fee_receipts' }, (payload) => {
+        if (payload.eventType === 'INSERT') setFeeReceipts(prev => [payload.new as any, ...prev]);
+        if (payload.eventType === 'DELETE') setFeeReceipts(prev => prev.filter(r => r.id !== payload.old.id));
+    }).subscribe();
+
+    return () => {
+      supabase.removeChannel(studentChannel);
+      supabase.removeChannel(staffChannel);
+      supabase.removeChannel(noticeChannel);
+      supabase.removeChannel(settingsChannel);
+      supabase.removeChannel(feesChannel);
+    };
+  }, []);
 
   const handleLogin = (role: string) => {
     setUserRole(role);
@@ -124,112 +135,56 @@ const App: React.FC = () => {
     setActiveTab(role === 'Parent' ? 'parent_portal' : 'dashboard');
   };
 
-  const handleAddReceipt = (receipt: FeeReceipt) => setFeeReceipts([receipt, ...feeReceipts]);
+  const handleSaveSettings = async (newSettings: AppSettings) => {
+    const { error } = await supabase
+      .from('app_settings')
+      .update(newSettings)
+      .eq('id', (settings as any).id);
+    
+    if (error) alert("Settings Update Failed: " + error.message);
+    // State update happens via Realtime Subscription
+  };
 
-  // CRUD HANDLERS
-  const handleSavePerson = (data: any) => {
+  const handleSavePerson = async (data: any) => {
     const isStudent = activeTab === 'students';
+    const table = isStudent ? 'students' : 'staff';
+
     if (editingItemId) {
-      if (isStudent) {
-        setStudents(students.map(s => s.id === editingItemId ? { ...s, ...data } : s));
-      } else {
-        setStaff(staff.map(s => s.id === editingItemId ? { ...s, ...data } : s));
-      }
+      const { error } = await supabase.from(table).update(data).eq('id', editingItemId);
+      if (error) alert("Update failed: " + error.message);
     } else {
-      const newId = `ID${Date.now()}`;
-      const newItem = { id: newId, ...data };
-      if (isStudent) setStudents([...students, newItem]);
-      else setStaff([...staff, newItem]);
+      const { error } = await supabase.from(table).insert([data]);
+      if (error) alert("Creation failed: " + error.message);
     }
+    // State updates happen via Realtime Subscription automatically
     setShowAddForm(false);
     setEditingItemId(null);
   };
 
-  const handleDeletePerson = (id: string) => {
-    if (activeTab === 'students') {
-      setStudents(students.filter(s => s.id !== id));
-    } else {
-      setStaff(staff.filter(s => s.id !== id));
-    }
+  const handleDeletePerson = async (id: string) => {
+    const table = activeTab === 'students' ? 'students' : 'staff';
+    const { error } = await supabase.from(table).delete().eq('id', id);
+    if (error) alert("Delete failed: " + error.message);
   };
 
-  const handleEditRequest = (id: string) => {
-    setEditingItemId(id);
-    setShowAddForm(true);
+  const handleAddReceipt = async (receipt: FeeReceipt) => {
+    const { error } = await supabase.from('fee_receipts').insert([receipt]);
+    if (error) alert("Receipt sync failed: " + error.message);
   };
 
-  const handleUpdateStaffCredentials = (staffId: string, updates: Partial<Staff>) => {
-    setStaff(staff.map(s => s.id === staffId ? { ...s, ...updates } : s));
+  const handleAddNotice = async (notice: Notice) => {
+    const { error } = await supabase.from('notices').insert([notice]);
+    if (error) alert("Notice sync failed: " + error.message);
   };
 
-  const renderContent = () => {
-    if (showAddForm) {
-      const targetList = activeTab === 'students' ? students : staff;
-      const initialData = editingItemId ? targetList.find(i => i.id === editingItemId) : undefined;
-      return (
-        <AddPersonForm 
-          type={activeTab === 'students' ? 'student' : 'staff'} 
-          settings={settings} 
-          initialData={initialData}
-          onCancel={() => { setShowAddForm(false); setEditingItemId(null); }} 
-          onSubmit={handleSavePerson} 
-        />
-      );
-    }
-    
-    switch (activeTab) {
-      case 'dashboard': return <Dashboard notices={notices} students={students} staff={staff} transportRoutes={[]} exams={exams} donations={[]} feeRecords={feeRecords} feeReceipts={feeReceipts} userRole={userRole} />;
-      case 'parent_portal': return (
-        <ParentPortal 
-          student={students[0]} 
-          exams={exams} 
-          results={[]} 
-          homeworks={[]} 
-          submissions={[]} 
-          fees={feeRecords} 
-          classTeacher={staff[0]} 
-          libraryIssues={[]}
-          hostelAllotments={hostelAllotments}
-          feeReceipts={feeReceipts}
-        />
-      );
-      case 'fees': return <FeesModule students={students} staff={staff} settings={settings} hostelAllotments={hostelAllotments} hostelRooms={[]} transportRoutes={[]} issuedBooks={[]} damageReports={[]} feeReceipts={feeReceipts} onAddReceipt={handleAddReceipt} />;
-      case 'accounts': return <AccountsModule feeReceipts={feeReceipts} payrollHistory={payrollHistory} assets={assets} settings={settings} />;
-      case 'assets': return <AssetModule students={students} staff={staff} />;
-      case 'financial_report': return (
-        <FinancialConsolidatedReport 
-          students={students} 
-          feeReceipts={feeReceipts} 
-          feeMasters={[]} 
-          feeTypes={[]} 
-          hostelAllotments={hostelAllotments} 
-          hostelRooms={[]} 
-          transportRoutes={[]} 
-          issuedBooks={[]} 
-          damageReports={[]} 
-        />
-      );
-      case 'library': return <LibraryModule students={students} staff={staff} settings={settings} />;
-      case 'hostel': return <HostelModule students={students} staff={staff} />;
-      case 'students': return <ListView type="students" items={students} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={handleDeletePerson} onEdit={handleEditRequest} />;
-      case 'staff': return <ListView type="staff" items={staff} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={handleDeletePerson} onEdit={handleEditRequest} />;
-      case 'notices': return <NoticeModule settings={settings} notices={notices} onAddNotice={(n) => setNotices([n, ...notices])} onDeleteNotice={(id) => setNotices(notices.filter(x => x.id !== id))} />;
-      case 'academic': return <AcademicModule staff={staff} />;
-      case 'attendance': return <AttendanceModule students={students} staff={staff} />;
-      case 'examination': return <ExaminationModule students={students} settings={settings} />;
-      case 'teacher_homework': return <HomeworkModule teacher={staff[0]} students={students} />;
-      case 'teacher_messages': return <TeacherMessages teacher={staff[0]} students={students} />;
-      case 'payroll': return <PayrollModule staff={staff} settings={settings} staffAttendance={[]} />;
-      case 'labs': return <LabModule />;
-      case 'activities': return <ActivityModule />;
-      case 'transport': return <TransportModule />;
-      case 'donations': return <DonationModule />;
-      case 'alumni': return <AlumniModule />;
-      case 'certificates': return <CertificateModule settings={settings} students={students} staff={staff} />;
-      case 'credentials': return <CredentialRegistry students={students} staff={staff} />;
-      case 'settings': return <SettingsView settings={settings} onUpdate={setSettings} staff={staff} onUpdateStaff={handleUpdateStaffCredentials} />;
-      default: return <Dashboard notices={notices} students={students} staff={staff} transportRoutes={[]} exams={exams} donations={[]} feeRecords={feeRecords} feeReceipts={feeReceipts} userRole={userRole} />;
-    }
+  const handleDeleteNotice = async (id: string) => {
+    const { error } = await supabase.from('notices').delete().eq('id', id);
+    if (error) alert("Notice delete failed: " + error.message);
+  };
+
+  const handleUpdateStaffCredentials = async (staffId: string, updates: Partial<Staff>) => {
+    const { error } = await supabase.from('staff').update(updates).eq('id', staffId);
+    if (error) alert("Credential sync failed: " + error.message);
   };
 
   if (!isAuthenticated) return <AuthModule onLogin={handleLogin} />;
@@ -242,13 +197,59 @@ const App: React.FC = () => {
            <div className="flex items-center gap-4">
               <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: COLORS.primary }}></div>
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Secure Institutional Node</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
+                  {isLoading ? 'Synchronizing Institutional Cloud...' : 'Secure Institutional Node'}
+                </p>
                 <h2 className="text-lg font-black text-slate-800 uppercase italic tracking-tight">{userRole} Control Interface</h2>
               </div>
            </div>
            <button onClick={() => setIsAuthenticated(false)} className="px-6 py-2 bg-slate-50 text-slate-400 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-sm">Logout</button>
         </div>
-        <div className="max-w-[1400px] mx-auto p-10 print:p-0">{renderContent()}</div>
+        
+        <div className="max-w-[1400px] mx-auto p-10 print:p-0">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-40 gap-6">
+               <div className="w-16 h-16 border-8 border-slate-100 border-t-indigo-600 rounded-full animate-spin"></div>
+               <p className="text-xs font-black text-slate-400 uppercase tracking-[0.4em]">Establishing Secure Sync...</p>
+            </div>
+          ) : (
+            showAddForm ? (
+              <AddPersonForm 
+                type={activeTab === 'students' ? 'student' : 'staff'} 
+                settings={settings} 
+                initialData={editingItemId ? [...students, ...staff].find(i => i.id === editingItemId) : undefined}
+                onCancel={() => { setShowAddForm(false); setEditingItemId(null); }} 
+                onSubmit={handleSavePerson} 
+              />
+            ) : (
+              (() => {
+                switch (activeTab) {
+                  case 'dashboard': return <Dashboard notices={notices} students={students} staff={staff} transportRoutes={[]} exams={exams} donations={[]} feeRecords={feeRecords} feeReceipts={feeReceipts} userRole={userRole} />;
+                  case 'fees': return <FeesModule students={students} staff={staff} settings={settings} hostelAllotments={hostelAllotments} hostelRooms={[]} transportRoutes={[]} issuedBooks={[]} damageReports={[]} feeReceipts={feeReceipts} onAddReceipt={handleAddReceipt} />;
+                  case 'students': return <ListView type="students" items={students} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={handleDeletePerson} onEdit={(id) => { setEditingItemId(id); setShowAddForm(true); }} />;
+                  case 'staff': return <ListView type="staff" items={staff} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={handleDeletePerson} onEdit={(id) => { setEditingItemId(id); setShowAddForm(true); }} />;
+                  case 'notices': return <NoticeModule settings={settings} notices={notices} onAddNotice={handleAddNotice} onDeleteNotice={handleDeleteNotice} />;
+                  case 'settings': return <SettingsView settings={settings} onUpdate={handleSaveSettings} staff={staff} onUpdateStaff={handleUpdateStaffCredentials} />;
+                  case 'academic': return <AcademicModule staff={staff} />;
+                  case 'attendance': return <AttendanceModule students={students} staff={staff} />;
+                  case 'examination': return <ExaminationModule students={students} settings={settings} />;
+                  case 'teacher_homework': return <HomeworkModule teacher={staff[0]} students={students} />;
+                  case 'teacher_messages': return <TeacherMessages teacher={staff[0]} students={students} />;
+                  case 'payroll': return <PayrollModule staff={staff} settings={settings} staffAttendance={[]} />;
+                  case 'labs': return <LabModule />;
+                  case 'activities': return <ActivityModule />;
+                  case 'transport': return <TransportModule />;
+                  case 'donations': return <DonationModule />;
+                  case 'alumni': return <AlumniModule />;
+                  case 'certificates': return <CertificateModule settings={settings} students={students} staff={staff} />;
+                  case 'credentials': return <CredentialRegistry students={students} staff={staff} />;
+                  case 'accounts': return <AccountsModule feeReceipts={feeReceipts} payrollHistory={[]} assets={assets} settings={settings} />;
+                  default: return <div className="p-20 text-center text-slate-300 font-black uppercase tracking-widest">Module Initializing...</div>;
+                }
+              })()
+            )
+          )}
+        </div>
       </main>
     </div>
   );
