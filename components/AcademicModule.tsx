@@ -1,47 +1,24 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState } from 'react';
 import AcademicPlanner from './AcademicPlanner';
 import { COLORS } from '../constants';
 import { FormSection, Input, Select } from './FormLayout';
-import { LessonPlan, Staff } from '../types';
+import { LessonPlan } from '../types';
 
-interface AcademicModuleProps {
-  staff: Staff[];
-}
-
-interface ClassAssignment {
-  grade: string;
-  section: string;
-  classTeacherId: string;
-  subjectTeachers: Record<string, string>;
-}
-
-interface TimetableCell {
-  subject: string;
-  teacherId: string;
-}
-
-const AcademicModule: React.FC<AcademicModuleProps> = ({ staff }) => {
+const AcademicModule: React.FC = () => {
   const [subTab, setSubTab] = useState<'planner' | 'classes' | 'timetable' | 'lessons'>('planner');
+  const [selectedLessonGrade, setSelectedLessonGrade] = useState<string>('Class 10');
   
-  // Selection Filters
-  const [selectedGrade, setSelectedGrade] = useState<string>('Class 10');
-  const [selectedSection, setSelectedSection] = useState<string>('A');
-  const [selectedSubjectForLessons, setSelectedSubjectForLessons] = useState<string>('Mathematics');
-
-  // Persistence States
-  const [classConfigs, setClassConfigs] = useState<ClassAssignment[]>([]);
-  const [timeTables, setTimeTables] = useState<Record<string, Record<number, Record<number, TimetableCell>>>>({});
-  const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([
-    { id: 'LP1', grade: 'Class 10', subject: 'Mathematics', chapterNo: '01', chapterTitle: 'Real Numbers', lessonsCount: 5 },
-    { id: 'LP2', grade: 'Class 10', subject: 'Mathematics', chapterNo: '02', chapterTitle: 'Polynomials', lessonsCount: 8 }
+  // State for dynamic Lesson Plans
+  const [plans, setPlans] = useState<LessonPlan[]>([
+    { id: '1', grade: 'Class 10', subject: 'mathematics', chapterNo: '01', chapterTitle: 'Quadratic Equations', lessonsCount: 8 },
+    { id: '2', grade: 'Class 10', subject: 'physics', chapterNo: '01', chapterTitle: 'Light Reflection', lessonsCount: 12 },
+    { id: '3', grade: 'Class 1', subject: 'hindi', chapterNo: '01', chapterTitle: 'Varnamala', lessonsCount: 5 }
   ]);
-  
-  // UI Interaction States
-  const [isEditingClass, setIsEditingClass] = useState(false);
-  const [editCell, setEditCell] = useState<{ day: number, period: number } | null>(null);
-  const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
 
+  const [editingPlan, setEditingPlan] = useState<LessonPlan | null>(null);
+
+  const WINGS = ['Foundation', 'Primary', 'Middle', 'Senior'];
   const SECTIONS = ['A', 'B', 'C', 'D', 'E'];
   const GRADES = [
     'Pre-Nursery', 'Nursery', 'KG', 
@@ -57,109 +34,49 @@ const AcademicModule: React.FC<AcademicModuleProps> = ({ staff }) => {
     'Psychology', 'Environmental Science', 'Sports', 'Library', 'Art & Craft'
   ];
 
-  const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8];
-
-  // Logic: Fetch existing configuration for selected Grade/Section
-  const currentClassConfig = useMemo(() => {
-    return classConfigs.find(c => c.grade === selectedGrade && c.section === selectedSection);
-  }, [classConfigs, selectedGrade, selectedSection]);
-
-  const currentTimeTable = useMemo(() => {
-    const key = `${selectedGrade}-${selectedSection}`;
-    return timeTables[key] || {};
-  }, [timeTables, selectedGrade, selectedSection]);
-
-  const filteredLessons = useMemo(() => {
-    return lessonPlans.filter(lp => lp.grade === selectedGrade && lp.subject === selectedSubjectForLessons);
-  }, [lessonPlans, selectedGrade, selectedSubjectForLessons]);
-
-  const handleSaveClassConfig = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const subjectTeachers: Record<string, string> = {};
-    SUBJECTS.forEach(sub => {
-      const fieldName = `teacher_${sub.toLowerCase().replace(/\s+/g, '_')}`;
-      const teacherId = formData.get(fieldName) as string;
-      if (teacherId) subjectTeachers[sub] = teacherId;
-    });
-
-    const newConfig: ClassAssignment = {
-      grade: selectedGrade,
-      section: selectedSection,
-      classTeacherId: formData.get('classTeacherId') as string,
-      subjectTeachers
-    };
-
-    setClassConfigs(prev => {
-      const filtered = prev.filter(c => !(c.grade === selectedGrade && c.section === selectedSection));
-      return [...filtered, newConfig];
-    });
-    
-    setIsEditingClass(false);
-    alert(`Configuration for ${selectedGrade} ${selectedSection} Saved!`);
-  };
-
-  const handleSaveTimetableCell = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editCell) return;
-    const formData = new FormData(e.currentTarget);
-    const key = `${selectedGrade}-${selectedSection}`;
-    
-    const newCell: TimetableCell = {
-      subject: formData.get('cell_subject') as string,
-      teacherId: formData.get('cell_teacher') as string
-    };
-
-    setTimeTables(prev => {
-      const classTable = { ...(prev[key] || {}) };
-      const dayRow = { ...(classTable[editCell.day] || {}) };
-      dayRow[editCell.period] = newCell;
-      classTable[editCell.day] = dayRow;
-      return { ...prev, [key]: classTable };
-    });
-
-    setEditCell(null);
-  };
-
   const handleSaveLesson = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const data = {
-      chapterNo: formData.get('chapterNo') as string,
-      chapterTitle: formData.get('chapterTitle') as string,
-      lessonsCount: Number(formData.get('lessonsCount')),
-      grade: selectedGrade,
-      subject: selectedSubjectForLessons
+    const newPlan: LessonPlan = {
+      id: editingPlan ? editingPlan.id : Math.random().toString(36).substr(2, 9),
+      grade: selectedLessonGrade,
+      subject: formData.get('subject') as string,
+      chapterNo: formData.get('chapter_no') as string,
+      chapterTitle: formData.get('chapter_title') as string,
+      lessonsCount: 10, // Default for demo
     };
 
-    if (editingChapterId) {
-      setLessonPlans(prev => prev.map(lp => lp.id === editingChapterId ? { ...lp, ...data } : lp));
-      setEditingChapterId(null);
+    if (editingPlan) {
+      setPlans(plans.map(p => p.id === editingPlan.id ? newPlan : p));
+      setEditingPlan(null);
     } else {
-      setLessonPlans(prev => [...prev, { id: `LP-${Date.now()}`, ...data }]);
+      setPlans([...plans, newPlan]);
     }
     e.currentTarget.reset();
   };
 
-  const handleDeleteChapter = (id: string) => {
-    if (confirm("Permanently delete this chapter from the repository?")) {
-      setLessonPlans(prev => prev.filter(lp => lp.id !== id));
+  const handleDeletePlan = (id: string) => {
+    if (confirm('Are you sure you want to delete this lesson plan?')) {
+      setPlans(plans.filter(p => p.id !== id));
     }
   };
 
-  const staffOptions = staff.map(s => ({ value: s.id, label: s.name }));
+  const handleEditPlan = (plan: LessonPlan) => {
+    setEditingPlan(plan);
+    setSelectedLessonGrade(plan.grade);
+    // Note: In a real app, we'd use a controlled form. Here we might need to use refs or state to reset values.
+  };
+
+  const filteredPlans = plans.filter(p => p.grade === selectedLessonGrade);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Tab Navigation */}
+    <div className="space-y-6">
       <div className="flex flex-wrap gap-2 p-1 bg-white rounded-2xl border border-slate-200 w-fit">
         {[
           { id: 'planner', label: 'Academic Planner' },
           { id: 'classes', label: 'Class Management' },
           { id: 'timetable', label: 'Time Table' },
-          { id: 'lessons', label: 'Curriculum Repository' },
+          { id: 'lessons', label: 'Lesson Plans' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -176,145 +93,68 @@ const AcademicModule: React.FC<AcademicModuleProps> = ({ staff }) => {
         ))}
       </div>
 
-      {/* Persistence Controls for Institutional Matrix */}
-      {(subTab !== 'planner') && (
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-center gap-6 sticky top-4 z-40 backdrop-blur-md bg-white/95">
-           <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg">
-                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-              </div>
-              <div>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Selector</p>
-                 <h3 className="text-sm font-black text-slate-900 uppercase">Academic Matrix</h3>
-              </div>
-           </div>
-           
-           <div className="flex-1 flex gap-4">
-              <div className="flex-1">
-                 <Select label="" name="nav_grade" defaultValue={selectedGrade} onSelect={setSelectedGrade} options={GRADES.map(g => ({value: g, label: g}))} />
-              </div>
-              {subTab !== 'lessons' && (
-                <div className="flex-1">
-                   <Select label="" name="nav_section" defaultValue={selectedSection} onSelect={setSelectedSection} options={SECTIONS.map(s => ({value: s, label: `Section ${s}`}))} />
-                </div>
-              )}
-           </div>
-
-           <div className="flex items-center gap-3">
-              <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${subTab === 'lessons' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : currentClassConfig ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-                 {subTab === 'lessons' ? `${selectedGrade} Repository` : currentClassConfig ? 'Mapping Active' : 'No Mapping Found'}
-              </div>
-           </div>
-        </div>
-      )}
-
       {subTab === 'planner' && <AcademicPlanner />}
 
       {subTab === 'classes' && (
-        <div className="space-y-6 max-w-7xl mx-auto animate-in slide-in-from-bottom-4">
-          <form onSubmit={handleSaveClassConfig}>
-            <div className="flex justify-between items-center mb-6">
-               <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">Institutional Mapping</h2>
-               <div className="flex gap-4">
-                  {!isEditingClass && currentClassConfig ? (
-                    <button type="button" onClick={() => setIsEditingClass(true)} className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-105 transition-all">Modify Mapping</button>
-                  ) : (
-                    <button type="submit" className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-105 transition-all">Save Institutional Mapping</button>
-                  )}
-               </div>
+        <div className="space-y-6 max-w-7xl mx-auto">
+          <FormSection title="Class & Teacher Allocation" description="Define wings, sections and assign academic leaders.">
+            <Select label="Wing" name="wing" required options={WINGS.map(w => ({value: w, label: w}))} />
+            <Select label="Grade" name="grade" required options={GRADES.map(g => ({value: g, label: g}))} />
+            <Select label="Section" name="section" required options={SECTIONS.map(s => ({value: s, label: s}))} />
+            <Input label="Class Teacher" name="classTeacher" placeholder="Select Teacher" required />
+            <div className="lg:col-span-3 border-t border-slate-100 pt-8 mt-4">
+              <h4 className="text-lg font-black text-slate-800 uppercase tracking-tight">Comprehensive Subject Allocation</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100 mt-4">
+                {SUBJECTS.map((subject) => (
+                  <div key={subject} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-all group">
+                    <Input label={subject} name={`teacher_${subject.toLowerCase().replace(/\s+/g, '_')}`} placeholder="Assign Teacher" />
+                  </div>
+                ))}
+              </div>
             </div>
-
-            <div className={`space-y-8 ${(!isEditingClass && currentClassConfig) ? 'pointer-events-none opacity-80 grayscale-[0.5]' : ''}`}>
-              <FormSection title="Leadership Assignment" description={`Authorized staff for ${selectedGrade} ${selectedSection}`}>
-                <div className="lg:col-span-3">
-                  <Select 
-                    label="Assigned Class Teacher" 
-                    name="classTeacherId" 
-                    required 
-                    defaultValue={currentClassConfig?.classTeacherId}
-                    options={staffOptions} 
-                  />
-                </div>
-              </FormSection>
-
-              <FormSection title="Curriculum Allocation" description="Assign faculty leaders to specific subject curricula.">
-                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {SUBJECTS.map((subject) => (
-                    <div key={subject} className="bg-slate-50 p-4 rounded-3xl border border-slate-100 shadow-sm hover:border-indigo-200 transition-all group">
-                      <Select 
-                        label={subject} 
-                        name={`teacher_${subject.toLowerCase().replace(/\s+/g, '_')}`} 
-                        defaultValue={currentClassConfig?.subjectTeachers[subject]}
-                        options={staffOptions} 
-                      />
-                    </div>
-                  ))}
-                </div>
-              </FormSection>
-            </div>
-          </form>
+          </FormSection>
         </div>
       )}
 
       {subTab === 'timetable' && (
-        <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden animate-in slide-in-from-bottom-4">
-          <div className="flex justify-between items-center mb-10">
-            <div>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase underline decoration-indigo-200 underline-offset-8 decoration-8 mb-2">Academic Schedule Blueprint</h3>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Session 2025-26 • {selectedGrade} Section {selectedSection}</p>
+        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-xl font-black text-slate-900 tracking-tight italic uppercase underline decoration-indigo-200 underline-offset-8 decoration-4">Institutional Schedule</h3>
+            <div className="flex gap-4">
+              <Select label="" name="filter_class" options={GRADES.map(g => ({value: g, label: g}))} />
+              <Select label="" name="filter_section" options={SECTIONS.map(s => ({value: s, label: s}))} />
             </div>
-            <button 
-              onClick={() => alert(`Timetable for ${selectedGrade} ${selectedSection} committed to master ledger.`)}
-              className="px-10 py-4 bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all"
-            >
-              Commit Master Schedule
-            </button>
           </div>
-
-          <div className="overflow-x-auto rounded-[2rem] border border-slate-100 shadow-inner">
+          <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-inner">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-slate-900 text-white">
-                  <th className="p-6 text-xs font-black uppercase border border-slate-800 tracking-widest text-center">Period</th>
-                  {DAYS.map(day => (
-                    <th key={day} className="p-6 text-xs font-black uppercase border border-slate-800 tracking-widest text-center">{day}</th>
-                  ))}
+                  <th className="p-5 text-xs font-black uppercase border border-slate-800 tracking-widest">Period</th>
+                  <th className="p-5 text-xs font-black uppercase border border-slate-800 tracking-widest text-center">Mon</th>
+                  <th className="p-5 text-xs font-black uppercase border border-slate-800 tracking-widest text-center">Tue</th>
+                  <th className="p-5 text-xs font-black uppercase border border-slate-800 tracking-widest text-center">Wed</th>
+                  <th className="p-5 text-xs font-black uppercase border border-slate-800 tracking-widest text-center">Thu</th>
+                  <th className="p-5 text-xs font-black uppercase border border-slate-800 tracking-widest text-center">Fri</th>
+                  <th className="p-5 text-xs font-black uppercase border border-slate-800 tracking-widest text-center">Sat</th>
                 </tr>
               </thead>
               <tbody>
-                {PERIODS.map((pNum, pIdx) => (
-                  <tr key={pNum} className="group hover:bg-slate-50/50 transition-all">
-                    <td className="p-6 border border-slate-100 text-center font-black text-slate-300 text-xs italic">
-                       {pIdx === 4 ? <span className="text-indigo-600">BREAK</span> : `0${pNum}`}
+                {[1, 2, 3, 4, 'BREAK', 5, 6, 7, 8].map((slot, i) => (
+                  <tr key={i} className={slot === 'BREAK' ? 'bg-indigo-50/50' : 'group hover:bg-slate-50/30'}>
+                    <td className="p-4 border border-slate-100 text-center font-black text-slate-400 text-xs">
+                      {slot === 'BREAK' ? <span className="text-indigo-600 font-black">RECESS</span> : `0${slot}`}
                     </td>
-                    {pIdx === 4 ? (
-                       <td colSpan={6} className="p-4 border border-slate-100 text-center text-[10px] font-black text-indigo-200 tracking-[1.5em] uppercase italic bg-indigo-50/30">Transition & Sustenance</td>
+                    {slot === 'BREAK' ? (
+                      <td colSpan={6} className="p-3 border border-slate-100 text-center text-[10px] font-black text-indigo-400 tracking-[1.5em] uppercase italic">Transition & Sustenance Period</td>
                     ) : (
-                      DAYS.map((_, dIdx) => {
-                        const cell = currentTimeTable[dIdx]?.[pNum];
-                        const teacher = staff.find(s => s.id === cell?.teacherId);
-                        return (
-                          <td 
-                            key={dIdx} 
-                            onClick={() => setEditCell({ day: dIdx, period: pNum })}
-                            className="p-6 border border-slate-100 min-h-[100px] transition-all cursor-pointer text-center relative hover:bg-white hover:shadow-xl hover:z-10 group/cell"
-                          >
-                             {cell ? (
-                               <div className="space-y-1">
-                                  <div className="text-[11px] font-black text-slate-800 uppercase tracking-tight italic group-hover/cell:text-indigo-600">{cell.subject}</div>
-                                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{teacher?.name || 'TBA'}</div>
-                               </div>
-                             ) : (
-                               <div className="opacity-0 group-hover/cell:opacity-100 transition-opacity">
-                                  <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Assign Period</span>
-                               </div>
-                             )}
-                             <div className="absolute top-2 right-2 opacity-0 group-hover/cell:opacity-100">
-                                <svg className="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                             </div>
-                          </td>
-                        );
-                      })
+                      ['','','','','',''].map((_, j) => (
+                        <td key={j} className="p-4 border border-slate-100 min-h-[90px] transition-all cursor-pointer text-center">
+                          <div className="text-[11px] font-black text-slate-800 uppercase truncate">
+                            {SUBJECTS[Math.floor(Math.random() * SUBJECTS.length)]}
+                          </div>
+                          <div className="text-[9px] font-bold text-slate-400 mt-1">Prof. Alexander</div>
+                        </td>
+                      ))
                     )}
                   </tr>
                 ))}
@@ -325,138 +165,133 @@ const AcademicModule: React.FC<AcademicModuleProps> = ({ staff }) => {
       )}
 
       {subTab === 'lessons' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 animate-in slide-in-from-bottom-4">
-           {/* Subject Sidebar */}
-           <div className="lg:col-span-3 space-y-6">
-              <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm">
-                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Subject Filter</h3>
-                 <div className="space-y-1 overflow-y-auto max-h-[500px] custom-scrollbar pr-2">
-                    {SUBJECTS.map(sub => (
-                      <button
-                        key={sub}
-                        onClick={() => setSelectedSubjectForLessons(sub)}
-                        className={`w-full text-left px-4 py-3 rounded-xl transition-all border ${
-                          selectedSubjectForLessons === sub 
-                          ? 'bg-slate-900 text-white border-slate-900 shadow-lg' 
-                          : 'bg-slate-50 text-slate-500 border-slate-100 hover:border-slate-300'
-                        }`}
+        <div className="space-y-6">
+          <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Lesson Strategy & Planning</h2>
+              <p className="text-slate-500 font-medium text-sm italic">Curating academic excellence class-by-class.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Focusing Class:</span>
+              <select 
+                value={selectedLessonGrade} 
+                onChange={(e) => setSelectedLessonGrade(e.target.value)}
+                className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black outline-none border-none shadow-lg focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              >
+                {GRADES.map(g => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1 space-y-6">
+              <form onSubmit={handleSaveLesson}>
+                <FormSection title={editingPlan ? "Modify Plan" : "Lesson Architect"} description={editingPlan ? "Update existing curriculum module" : "Draft new curriculum modules"}>
+                  <div className="lg:col-span-3 space-y-4">
+                    <Select 
+                      label="Target Subject" 
+                      name="subject" 
+                      required
+                      options={SUBJECTS.map(s => ({value: s.toLowerCase(), label: s}))} 
+                    />
+                    <Input 
+                      label="Module / Chapter #" 
+                      name="chapter_no" 
+                      required
+                      placeholder="e.g., CH-05" 
+                      defaultValue={editingPlan?.chapterNo}
+                    />
+                    <Input 
+                      label="Chapter Title" 
+                      name="chapter_title" 
+                      required
+                      placeholder="Descriptive title" 
+                      defaultValue={editingPlan?.chapterTitle}
+                    />
+                    <div className="pt-4 flex gap-3">
+                      <button 
+                        type="submit"
+                        className="flex-1 py-4 rounded-2xl text-white font-black uppercase tracking-widest text-xs shadow-xl transition-all hover:brightness-110 active:scale-95" 
+                        style={{ backgroundColor: COLORS.primary }}
                       >
-                         <div className="text-xs font-black uppercase tracking-tight">{sub}</div>
+                        {editingPlan ? 'Update Plan' : `Deploy to ${selectedLessonGrade}`}
                       </button>
-                    ))}
-                 </div>
-              </div>
-           </div>
-
-           {/* Chapter Management */}
-           <div className="lg:col-span-9 space-y-8">
-              <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
-                 <div className="xl:col-span-4">
-                    <form onSubmit={handleSaveLesson}>
-                       <FormSection 
-                         title={editingChapterId ? "Update Chapter" : "Enroll Chapter"} 
-                         description={`Managing ${selectedSubjectForLessons} - ${selectedGrade}`}
-                       >
-                          <div className="lg:col-span-3 space-y-4">
-                             <div className="grid grid-cols-2 gap-4">
-                                <Input label="Chapter #" name="chapterNo" required placeholder="01" defaultValue={lessonPlans.find(lp=>lp.id === editingChapterId)?.chapterNo} />
-                                <Input label="Lesson Count" name="lessonsCount" type="number" required placeholder="5" defaultValue={lessonPlans.find(lp=>lp.id === editingChapterId)?.lessonsCount} />
-                             </div>
-                             <Input label="Chapter Title" name="chapterTitle" required placeholder="Calculus Basics" defaultValue={lessonPlans.find(lp=>lp.id === editingChapterId)?.chapterTitle} />
-                             
-                             <div className="flex gap-2">
-                                <button type="submit" className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-105 transition-all">
-                                   {editingChapterId ? 'Apply Update' : 'Index Chapter'}
-                                </button>
-                                {editingChapterId && (
-                                  <button type="button" onClick={() => setEditingChapterId(null)} className="px-6 py-4 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest">Cancel</button>
-                                )}
-                             </div>
-                          </div>
-                       </FormSection>
-                    </form>
-                 </div>
-
-                 <div className="xl:col-span-8 bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                    <div className="p-8 border-b border-slate-100 bg-slate-900 text-white flex justify-between items-center">
-                       <div>
-                          <h3 className="text-xl font-black uppercase tracking-tight italic">{selectedSubjectForLessons} Roadmap</h3>
-                          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Academic Session 2025-26</p>
-                       </div>
-                       <span className="px-3 py-1 bg-white/10 text-white rounded-full text-[9px] font-black uppercase tracking-widest">{filteredLessons.length} Chapters Indexed</span>
+                      {editingPlan && (
+                        <button 
+                          type="button"
+                          onClick={() => setEditingPlan(null)}
+                          className="px-6 py-4 rounded-2xl bg-slate-100 text-slate-500 font-black uppercase tracking-widest text-xs hover:bg-slate-200 transition-all"
+                        >
+                          Cancel
+                        </button>
+                      )}
                     </div>
-                    
-                    <div className="p-4 flex-1 overflow-y-auto max-h-[600px] custom-scrollbar">
-                       {filteredLessons.length === 0 ? (
-                         <div className="py-20 text-center opacity-20 flex flex-col items-center gap-4">
-                            <svg className="w-20 h-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                            <p className="text-sm font-black uppercase tracking-[0.4em]">Empty Curriculum Repository</p>
-                         </div>
-                       ) : (
-                         <div className="space-y-4 p-4">
-                            {filteredLessons.sort((a,b) => a.chapterNo.localeCompare(b.chapterNo)).map(lp => (
-                              <div key={lp.id} className="p-6 rounded-[2rem] border border-slate-100 bg-slate-50/30 hover:bg-white hover:shadow-xl hover:border-indigo-200 transition-all flex items-center justify-between group">
-                                 <div className="flex items-center gap-6">
-                                    <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex flex-col items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                                       <span className="text-[8px] font-black uppercase opacity-60">CH</span>
-                                       <span className="text-xl font-black italic">{lp.chapterNo}</span>
-                                    </div>
-                                    <div>
-                                       <h4 className="text-lg font-black text-slate-800 uppercase tracking-tight mb-1">{lp.chapterTitle}</h4>
-                                       <div className="flex items-center gap-3">
-                                          <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">{lp.lessonsCount} Modules</span>
-                                          <div className="w-1 h-1 rounded-full bg-slate-300"></div>
-                                          <span className="text-[9px] font-bold text-slate-400 uppercase italic">Institutional Core</span>
-                                       </div>
-                                    </div>
-                                 </div>
-                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button 
-                                      onClick={() => setEditingChapterId(lp.id)}
-                                      className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white shadow-sm transition-all"
-                                    >
-                                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                                    </button>
-                                    <button 
-                                      onClick={() => handleDeleteChapter(lp.id)}
-                                      className="p-3 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white shadow-sm transition-all"
-                                    >
-                                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                 </div>
-                              </div>
-                            ))}
-                         </div>
-                       )}
-                    </div>
-
-                    <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Data validated by Educational Directorate</p>
-                       <button className="px-8 py-3 bg-white text-slate-900 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl border border-slate-200 hover:scale-105 transition-all">Download Subject Syllabus</button>
-                    </div>
-                 </div>
-              </div>
-           </div>
-        </div>
-      )}
-
-      {/* Cell Editor Modal for Timetable */}
-      {editCell && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
-           <div className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl p-12 animate-in zoom-in-95 duration-300">
-              <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight mb-2 underline decoration-indigo-500 underline-offset-8">Configure Period</h3>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10">Assigning for {DAYS[editCell.day]} • Period 0{editCell.period}</p>
-              
-              <form onSubmit={handleSaveTimetableCell} className="space-y-6">
-                 <Select label="Course / Subject" name="cell_subject" required defaultValue={currentTimeTable[editCell.day]?.[editCell.period]?.subject} options={SUBJECTS.map(s=>({value:s, label:s}))} />
-                 <Select label="Assigned Faculty" name="cell_teacher" required defaultValue={currentTimeTable[editCell.day]?.[editCell.period]?.teacherId} options={staffOptions} />
-                 
-                 <div className="flex gap-4 pt-6">
-                    <button type="button" onClick={() => setEditCell(null)} className="flex-1 py-4 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">Discard</button>
-                    <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all">Update Cell</button>
-                 </div>
+                  </div>
+                </FormSection>
               </form>
-           </div>
+            </div>
+
+            <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+               <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+                  <h3 className="text-xl font-black text-slate-900">
+                    Course Repository: <span className="text-indigo-600">{selectedLessonGrade}</span>
+                  </h3>
+                  <div className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest">Live Updates</div>
+               </div>
+               
+               <div className="p-8 space-y-6 overflow-y-auto max-h-[600px] flex-1">
+                  {filteredPlans.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full py-20 text-slate-300">
+                      <svg className="w-16 h-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                      <p className="font-bold">No lesson plans deployed for this class yet.</p>
+                    </div>
+                  ) : (
+                    filteredPlans.map((plan) => (
+                      <div key={plan.id} className="p-5 rounded-2xl border border-slate-100 flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all group bg-white">
+                        <div className="flex items-center gap-5">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center font-black text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-inner border border-slate-200 uppercase">
+                            {plan.chapterNo}
+                          </div>
+                          <div>
+                            <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1 block">{plan.subject}</span>
+                            <p className="font-black text-slate-800">{plan.chapterTitle}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">{plan.lessonsCount} Detailed Lessons</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => handleEditPlan(plan)}
+                            title="Edit Plan"
+                            className="p-3 rounded-xl bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-100"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                          </button>
+                          <button 
+                            onClick={() => handleDeletePlan(plan.id)}
+                            title="Delete Plan"
+                            className="p-3 rounded-xl bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+               </div>
+               
+               <div className="p-6 bg-slate-900 text-white mt-auto">
+                 <div className="flex justify-between items-center text-xs font-black uppercase tracking-widest">
+                    <span>Repository Utilization</span>
+                    <span>{Math.min(100, (filteredPlans.length / 20) * 100).toFixed(0)}% Capacity</span>
+                 </div>
+                 <div className="mt-2 h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-500 transition-all duration-1000" style={{ width: `${(filteredPlans.length / 20) * 100}%` }} />
+                 </div>
+               </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
