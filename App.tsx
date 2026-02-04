@@ -41,58 +41,22 @@ const App: React.FC = () => {
   const [userRole, setUserRole] = useState<string>('');
   const [activeTab, setActiveTab] = useState<NavItem>('dashboard');
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  
   const [settings, setSettings] = useState<AppSettings>({
     schoolName: 'EduNexus Academy',
-    branchName: 'Main Campus'
+    branchName: 'Main Campus',
+    address: '123 Academic Plaza, Education Hub, India',
+    logo: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&q=80&w=200',
   });
   
-  // Shared States for Cross-Module Visibility
-  const [feeReceipts, setFeeReceipts] = useState<FeeReceipt[]>([
-    { id: 'R1', receiptNo: 'EN-882X1', studentId: 'S1', studentName: 'Aarav Sharma', grade: 'Class 10', section: 'A', amountPaid: 5000, discount: 0, penalty: 0, paymentDate: new Date().toISOString().split('T')[0], paymentMethod: 'UPI', session: '2025-26', description: 'Term 1 Tuition' },
-    { id: 'R2', receiptNo: 'EN-99K21', studentId: 'S2', studentName: 'Isha Patel', grade: 'Class 10', section: 'A', amountPaid: 5300, discount: 0, penalty: 0, paymentDate: '2025-02-15', paymentMethod: 'Cash', session: '2025-26', description: 'Annual Charges' }
-  ]);
-
-  const [assets, setAssets] = useState<Asset[]>([
-    { id: 'AST1', name: 'Nexus Workstation i9', category: 'Electronics', purchaseDate: '2025-01-10', cost: 85000, serialNumber: 'NX-9982', location: 'Admin Room 1', status: 'Operational', description: 'Main admin server station' }
-  ]);
-
-  const [payrollHistory, setPayrollHistory] = useState<PayrollRecord[]>([]);
-
-  const [feeMasters] = useState<FeeMaster[]>([
-    { id: 'FM1', feeTypeId: 'FT1', feeGroupId: 'FG2', amount: 4500, dueDate: '2025-04-10', grade: 'Class 10' }
-  ]);
-
-  const [feeTypes] = useState<FeeType[]>([
-    { id: 'FT1', name: 'Tuition Fee', description: 'Monthly academic charges' }
-  ]);
-
-  const [libraryIssues] = useState<IssuedBook[]>([
-    { id: 'ISS1', itemId: 'I2', personId: 'S1', personName: 'Aarav Sharma', issueDate: '2025-02-10', dueDate: '2025-02-17', reissueCount: 0, lateFee: 75, damageFee: 0 }
-  ]);
-
-  const [hostelAllotments] = useState<HostelAllotment[]>([
-    { id: 'A1', studentId: 'S1', studentName: 'Aarav Sharma', hostelId: 'H1', roomId: 'HR1', allotmentDate: '2025-01-01', feeStatus: 'Paid' }
-  ]);
-
-  const [notices, setNotices] = useState<Notice[]>([
-    { id: 'N1', title: 'Founders Day 2025', content: 'Celebration at main auditorium.', senderRole: 'Director', senderName: 'Mr. S.P. Singhania', date: '10 Feb 2025', targetAudience: ['Teacher', 'Non-Teaching Staff', 'Parent', 'Public'], priority: 'High' }
-  ]);
-
-  const [exams] = useState<Examination[]>([
-    { id: 'E1', title: 'Final Exam 2025', grade: 'Class 10', section: 'A', subject: 'Mathematics', date: '2025-03-15', totalMarks: 100, isResultDeclared: false }
-  ]);
-
-  const [feeRecords] = useState<StudentFeeRecord[]>([
-    { id: 'FR1', studentId: 'S1', totalAmount: 15800, discount: 0, paidAmount: 5000, dueDate: '2025-03-05', status: 'Partial' },
-    { id: 'FR2', studentId: 'S2', totalAmount: 5800, discount: 500, paidAmount: 5300, dueDate: '2025-03-05', status: 'Paid' }
-  ]);
-
-  const [students] = useState<Student[]>([
+  // Dynamic States for CRUD
+  const [students, setStudents] = useState<Student[]>([
     { id: 'S1', name: 'Aarav Sharma', gender: 'Male', dob: '2010-05-12', address: '123 Tech Lane, Bangalore', bloodGroup: 'A+', studentId: 'EDU-MAIN-STU-X8Z2', grade: 'Class 10', section: 'A', fatherName: 'Rajesh Sharma', fatherOccupation: 'Engineer', fatherOccupationAddress: 'Tech Park', fatherContact: '9876543210', guardianName: 'Rajesh Sharma', guardianRelationship: 'Father', guardianAddress: '123 Tech Lane', guardianContact: '9876543210', motherName: 'Sunita Sharma', motherOccupation: 'Teacher', motherOccupationAddress: 'Sector 4', motherContact: '9876543211', transportRouteId: 'R1' },
     { id: 'S2', name: 'Isha Patel', gender: 'Female', dob: '2011-03-14', address: '456 Garden View, Bangalore', bloodGroup: 'B+', studentId: 'EDU-MAIN-STU-Y9P3', grade: 'Class 10', section: 'A', fatherName: 'Manish Patel', fatherOccupation: 'Doctor', fatherOccupationAddress: 'Apollo', fatherContact: '9988776655', guardianName: 'Manish Patel', guardianRelationship: 'Father', guardianAddress: 'Garden View', guardianContact: '9988776655', motherName: 'Kavita Patel', motherOccupation: 'Artist', motherOccupationAddress: 'Home', motherContact: '9988776656' }
   ]);
 
-  const [staff] = useState<Staff[]>([
+  const [staff, setStaff] = useState<Staff[]>([
     { 
       id: 'T1', 
       name: 'Dr. Anjali Verma', 
@@ -122,8 +86,36 @@ const App: React.FC = () => {
       guardianName: 'Suresh Verma',
       guardianRelationship: 'Father',
       guardianAddress: 'Mumbai Main Street',
-      guardianContact: '0000000000'
+      guardianContact: '0000000000',
+      password: 'admin'
     }
+  ]);
+
+  const [feeReceipts, setFeeReceipts] = useState<FeeReceipt[]>([
+    { id: 'R1', receiptNo: 'EN-882X1', studentId: 'S1', studentName: 'Aarav Sharma', grade: 'Class 10', section: 'A', amountPaid: 5000, discount: 0, penalty: 0, paymentDate: new Date().toISOString().split('T')[0], paymentMethod: 'UPI', session: '2025-26', description: 'Term 1 Tuition' },
+    { id: 'R2', receiptNo: 'EN-99K21', studentId: 'S2', studentName: 'Isha Patel', grade: 'Class 10', section: 'A', amountPaid: 5300, discount: 0, penalty: 0, paymentDate: '2025-02-15', paymentMethod: 'Cash', session: '2025-26', description: 'Annual Charges' }
+  ]);
+
+  const [assets, setAssets] = useState<Asset[]>([
+    { id: 'AST1', name: 'Nexus Workstation i9', category: 'Electronics', purchaseDate: '2025-01-10', cost: 85000, serialNumber: 'NX-9982', location: 'Admin Room 1', status: 'Operational', description: 'Main admin server station' }
+  ]);
+
+  const [payrollHistory, setPayrollHistory] = useState<PayrollRecord[]>([]);
+  const [hostelAllotments] = useState<HostelAllotment[]>([
+    { id: 'A1', studentId: 'S1', studentName: 'Aarav Sharma', hostelId: 'H1', roomId: 'HR1', allotmentDate: '2025-01-01', feeStatus: 'Paid' }
+  ]);
+
+  const [notices, setNotices] = useState<Notice[]>([
+    { id: 'N1', title: 'Founders Day 2025', content: 'Celebration at main auditorium.', senderRole: 'Director', senderName: 'Mr. S.P. Singhania', date: '10 Feb 2025', targetAudience: ['Teacher', 'Non-Teaching Staff', 'Parent', 'Public'], priority: 'High' }
+  ]);
+
+  const [exams] = useState<Examination[]>([
+    { id: 'E1', title: 'Final Exam 2025', grade: 'Class 10', section: 'A', subject: 'Mathematics', date: '2025-03-15', totalMarks: 100, isResultDeclared: false }
+  ]);
+
+  const [feeRecords] = useState<StudentFeeRecord[]>([
+    { id: 'FR1', studentId: 'S1', totalAmount: 15800, discount: 0, paidAmount: 5000, dueDate: '2025-03-05', status: 'Partial' },
+    { id: 'FR2', studentId: 'S2', totalAmount: 5800, discount: 500, paidAmount: 5300, dueDate: '2025-03-05', status: 'Paid' }
   ]);
 
   const handleLogin = (role: string) => {
@@ -134,8 +126,56 @@ const App: React.FC = () => {
 
   const handleAddReceipt = (receipt: FeeReceipt) => setFeeReceipts([receipt, ...feeReceipts]);
 
+  // CRUD HANDLERS
+  const handleSavePerson = (data: any) => {
+    const isStudent = activeTab === 'students';
+    if (editingItemId) {
+      if (isStudent) {
+        setStudents(students.map(s => s.id === editingItemId ? { ...s, ...data } : s));
+      } else {
+        setStaff(staff.map(s => s.id === editingItemId ? { ...s, ...data } : s));
+      }
+    } else {
+      const newId = `ID${Date.now()}`;
+      const newItem = { id: newId, ...data };
+      if (isStudent) setStudents([...students, newItem]);
+      else setStaff([...staff, newItem]);
+    }
+    setShowAddForm(false);
+    setEditingItemId(null);
+  };
+
+  const handleDeletePerson = (id: string) => {
+    if (activeTab === 'students') {
+      setStudents(students.filter(s => s.id !== id));
+    } else {
+      setStaff(staff.filter(s => s.id !== id));
+    }
+  };
+
+  const handleEditRequest = (id: string) => {
+    setEditingItemId(id);
+    setShowAddForm(true);
+  };
+
+  const handleUpdateStaffCredentials = (staffId: string, updates: Partial<Staff>) => {
+    setStaff(staff.map(s => s.id === staffId ? { ...s, ...updates } : s));
+  };
+
   const renderContent = () => {
-    if (showAddForm) return <AddPersonForm type={activeTab === 'students' ? 'student' : 'staff'} settings={settings} onCancel={() => setShowAddForm(false)} onSubmit={() => setShowAddForm(false)} />;
+    if (showAddForm) {
+      const targetList = activeTab === 'students' ? students : staff;
+      const initialData = editingItemId ? targetList.find(i => i.id === editingItemId) : undefined;
+      return (
+        <AddPersonForm 
+          type={activeTab === 'students' ? 'student' : 'staff'} 
+          settings={settings} 
+          initialData={initialData}
+          onCancel={() => { setShowAddForm(false); setEditingItemId(null); }} 
+          onSubmit={handleSavePerson} 
+        />
+      );
+    }
     
     switch (activeTab) {
       case 'dashboard': return <Dashboard notices={notices} students={students} staff={staff} transportRoutes={[]} exams={exams} donations={[]} feeRecords={feeRecords} feeReceipts={feeReceipts} userRole={userRole} />;
@@ -148,33 +188,33 @@ const App: React.FC = () => {
           submissions={[]} 
           fees={feeRecords} 
           classTeacher={staff[0]} 
-          libraryIssues={libraryIssues}
+          libraryIssues={[]}
           hostelAllotments={hostelAllotments}
           feeReceipts={feeReceipts}
         />
       );
-      case 'fees': return <FeesModule students={students} staff={staff} settings={settings} hostelAllotments={hostelAllotments} hostelRooms={[]} transportRoutes={[]} issuedBooks={libraryIssues} damageReports={[]} feeReceipts={feeReceipts} onAddReceipt={handleAddReceipt} />;
+      case 'fees': return <FeesModule students={students} staff={staff} settings={settings} hostelAllotments={hostelAllotments} hostelRooms={[]} transportRoutes={[]} issuedBooks={[]} damageReports={[]} feeReceipts={feeReceipts} onAddReceipt={handleAddReceipt} />;
       case 'accounts': return <AccountsModule feeReceipts={feeReceipts} payrollHistory={payrollHistory} assets={assets} settings={settings} />;
       case 'assets': return <AssetModule students={students} staff={staff} />;
       case 'financial_report': return (
         <FinancialConsolidatedReport 
           students={students} 
           feeReceipts={feeReceipts} 
-          feeMasters={feeMasters} 
-          feeTypes={feeTypes} 
+          feeMasters={[]} 
+          feeTypes={[]} 
           hostelAllotments={hostelAllotments} 
           hostelRooms={[]} 
           transportRoutes={[]} 
-          issuedBooks={libraryIssues} 
+          issuedBooks={[]} 
           damageReports={[]} 
         />
       );
       case 'library': return <LibraryModule students={students} staff={staff} settings={settings} />;
       case 'hostel': return <HostelModule students={students} staff={staff} />;
-      case 'students': return <ListView type="students" items={students} onAdd={() => setShowAddForm(true)} />;
-      case 'staff': return <ListView type="staff" items={staff} onAdd={() => setShowAddForm(true)} />;
+      case 'students': return <ListView type="students" items={students} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={handleDeletePerson} onEdit={handleEditRequest} />;
+      case 'staff': return <ListView type="staff" items={staff} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={handleDeletePerson} onEdit={handleEditRequest} />;
       case 'notices': return <NoticeModule settings={settings} notices={notices} onAddNotice={(n) => setNotices([n, ...notices])} onDeleteNotice={(id) => setNotices(notices.filter(x => x.id !== id))} />;
-      case 'academic': return <AcademicModule />;
+      case 'academic': return <AcademicModule staff={staff} />;
       case 'attendance': return <AttendanceModule students={students} staff={staff} />;
       case 'examination': return <ExaminationModule students={students} settings={settings} />;
       case 'teacher_homework': return <HomeworkModule teacher={staff[0]} students={students} />;
@@ -187,7 +227,7 @@ const App: React.FC = () => {
       case 'alumni': return <AlumniModule />;
       case 'certificates': return <CertificateModule settings={settings} students={students} staff={staff} />;
       case 'credentials': return <CredentialRegistry students={students} staff={staff} />;
-      case 'settings': return <SettingsView settings={settings} onUpdate={setSettings} />;
+      case 'settings': return <SettingsView settings={settings} onUpdate={setSettings} staff={staff} onUpdateStaff={handleUpdateStaffCredentials} />;
       default: return <Dashboard notices={notices} students={students} staff={staff} transportRoutes={[]} exams={exams} donations={[]} feeRecords={feeRecords} feeReceipts={feeReceipts} userRole={userRole} />;
     }
   };

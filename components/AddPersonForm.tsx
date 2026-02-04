@@ -7,6 +7,7 @@ import { AppSettings } from '../types';
 interface AddPersonFormProps {
   type: 'student' | 'staff';
   settings: AppSettings;
+  initialData?: any;
   onCancel: () => void;
   onSubmit: (data: any) => void;
 }
@@ -19,20 +20,22 @@ const GRADES = [
 
 const SECTIONS = ['A', 'B', 'C', 'D', 'E'];
 
-const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel, onSubmit }) => {
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [generatedId, setGeneratedId] = useState<string>('');
-  const [isClassTeacher, setIsClassTeacher] = useState<boolean>(false);
-  const [selectedReligion, setSelectedReligion] = useState<string>('');
+const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, initialData, onCancel, onSubmit }) => {
+  const [photoPreview, setPhotoPreview] = useState<string | null>(initialData?.photo || null);
+  const [generatedId, setGeneratedId] = useState<string>(initialData?.id || '');
+  const [isClassTeacher, setIsClassTeacher] = useState<boolean>(initialData?.isClassTeacher || false);
+  const [selectedReligion, setSelectedReligion] = useState<string>(initialData?.religion || '');
 
   useEffect(() => {
-    const getInitials = (str: string) => str.split(' ').map(s => s[0]).join('').toUpperCase().slice(0, 3);
-    const sInit = getInitials(settings.schoolName || 'EDU');
-    const bInit = getInitials(settings.branchName || 'BRN');
-    const typeLabel = type === 'student' ? 'STU' : 'STF';
-    const random = Math.random().toString(36).substr(2, 4).toUpperCase();
-    setGeneratedId(`${sInit}-${bInit}-${typeLabel}-${random}`);
-  }, [type, settings]);
+    if (!initialData) {
+      const getInitials = (str: string) => str.split(' ').map(s => s[0]).join('').toUpperCase().slice(0, 3);
+      const sInit = getInitials(settings.schoolName || 'EDU');
+      const bInit = getInitials(settings.branchName || 'BRN');
+      const typeLabel = type === 'student' ? 'STU' : 'STF';
+      const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+      setGeneratedId(`${sInit}-${bInit}-${typeLabel}-${random}`);
+    }
+  }, [type, settings, initialData]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,15 +50,17 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
-    onSubmit({ ...data, isClassTeacher });
+    onSubmit({ ...data, photo: photoPreview, isClassTeacher });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 pb-12 max-w-5xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-8 pb-12 max-w-5xl mx-auto animate-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center sticky top-0 bg-[#F4F5F7]/95 backdrop-blur-md py-6 z-20 border-b border-slate-200 gap-4">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 capitalize tracking-tight">Register {type}</h2>
-          <p className="text-slate-500 font-medium text-sm">Create a new institutional record for {settings.schoolName}.</p>
+          <h2 className="text-3xl font-black text-slate-900 capitalize tracking-tight">
+            {initialData ? `Update ${type} Profile` : `Register ${type}`}
+          </h2>
+          <p className="text-slate-500 font-medium text-sm">Institutional data management for {settings.schoolName}.</p>
         </div>
         <div className="flex gap-4 w-full md:w-auto">
           <button
@@ -63,14 +68,14 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
             onClick={onCancel}
             className="flex-1 md:flex-none px-8 py-3 rounded-xl border-2 border-slate-300 text-slate-600 font-bold hover:bg-white transition-all"
           >
-            Cancel
+            Discard
           </button>
           <button
             type="submit"
             className="flex-1 md:flex-none px-8 py-3 rounded-xl text-white font-black shadow-xl transition-all hover:brightness-110 active:scale-95"
             style={{ backgroundColor: COLORS.primary, boxShadow: `0 10px 15px -3px ${COLORS.primary}40` }}
           >
-            Confirm & Save
+            {initialData ? 'Update Record' : 'Confirm & Save'}
           </button>
         </div>
       </div>
@@ -89,24 +94,24 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
                   <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                 </div>
               )}
-              <input type="file" name="photo" onChange={handlePhotoChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+              <input type="file" name="photo_file" onChange={handlePhotoChange} className="absolute inset-0 opacity-0 cursor-pointer" />
             </div>
           </div>
           <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Attach Official Photograph</span>
         </div>
         
-        <Input label="Full Name" name="name" required placeholder="Full legal name" />
+        <Input label="Full Name" name="name" required placeholder="Full legal name" defaultValue={initialData?.name} />
         
         {type === 'student' ? (
           <>
-            <Input label="Student ID" name="studentId" defaultValue={generatedId} required />
-            <Select label="Grade" name="grade" required options={GRADES.map(g => ({value: g, label: g}))} />
-            <Select label="Section" name="section" required options={SECTIONS.map(s => ({value: s, label: s}))} />
+            <Input label="Student ID" name="studentId" defaultValue={initialData?.studentId || generatedId} required />
+            <Select label="Grade" name="grade" defaultValue={initialData?.grade} required options={GRADES.map(g => ({value: g, label: g}))} />
+            <Select label="Section" name="section" defaultValue={initialData?.section} required options={SECTIONS.map(s => ({value: s, label: s}))} />
           </>
         ) : (
           <>
-            <Input label="Staff ID" name="staffId" defaultValue={generatedId} required />
-            <Select label="Role" name="role" required options={[
+            <Input label="Staff ID" name="staffId" defaultValue={initialData?.staffId || generatedId} required />
+            <Select label="Role" name="role" defaultValue={initialData?.role} required options={[
               { value: 'Teacher', label: 'Teacher' },
               { value: 'Principal', label: 'Principal' },
               { value: 'Accountant', label: 'Accountant' },
@@ -119,13 +124,15 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
           label="Gender" 
           name="gender" 
           required 
+          defaultValue={initialData?.gender}
           options={[{value: 'Male', label: 'Male'}, {value: 'Female', label: 'Female'}, {value: 'Other', label: 'Other'}]} 
         />
-        <Input label="Date of Birth" name="dob" type="date" required />
+        <Input label="Date of Birth" name="dob" type="date" required defaultValue={initialData?.dob} />
         <Select 
           label="Blood Group" 
           name="bloodGroup" 
           required 
+          defaultValue={initialData?.bloodGroup}
           options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => ({value: bg, label: bg}))} 
         />
 
@@ -136,6 +143,7 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
                 label="Religion" 
                 name="religion" 
                 required 
+                defaultValue={initialData?.religion}
                 onSelect={(val) => setSelectedReligion(val)}
                 options={[
                   {value: 'Hindu', label: 'Hindu'},
@@ -150,13 +158,14 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
                 ]} 
               />
               {selectedReligion === 'Other' && (
-                <Input label="Mention Religion" name="otherReligion" required placeholder="Specify religion" />
+                <Input label="Mention Religion" name="otherReligion" required placeholder="Specify religion" defaultValue={initialData?.otherReligion} />
               )}
-              <Input label="Caste" name="caste" required placeholder="Enter caste" />
+              <Input label="Caste" name="caste" required placeholder="Enter caste" defaultValue={initialData?.caste} />
               <Select 
                 label="Category" 
                 name="category" 
                 required 
+                defaultValue={initialData?.category}
                 options={[
                   {value: 'General', label: 'General'},
                   {value: 'OBC', label: 'OBC'},
@@ -168,16 +177,21 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
            </div>
         </div>
 
-        <Select 
-          label="Relationship Status" 
-          name="relationshipStatus" 
-          required 
-          options={[{value: 'Single', label: 'Single'}, {value: 'Married', label: 'Married'}]} 
-        />
-        <Input label="Medical Allergies" name="allergy" placeholder="Any medical concerns?" />
-        <FileUpload label="Upload Identification (PDF/JPG)" name="idDocument" required />
+        {/* Removed Relationship Status from Student Form as per request */}
+        {type === 'staff' && (
+          <Select 
+            label="Relationship Status" 
+            name="relationshipStatus" 
+            required 
+            defaultValue={initialData?.relationshipStatus}
+            options={[{value: 'Single', label: 'Single'}, {value: 'Married', label: 'Married'}]} 
+          />
+        )}
+        
+        <Input label="Medical Allergies" name="allergy" placeholder="Any medical concerns?" defaultValue={initialData?.allergy} />
+        <FileUpload label="Upload Identification (PDF/JPG)" name="idDocument" required={!initialData} />
         <div className="lg:col-span-2">
-          <Input label="Current Residence" name="address" required placeholder="Permanent residential address" />
+          <Input label="Current Residence" name="address" required placeholder="Permanent residential address" defaultValue={initialData?.address} />
         </div>
       </FormSection>
 
@@ -185,30 +199,30 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
         <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100">
            <div className="space-y-6">
               <h4 className="text-sm font-black text-slate-900 uppercase italic">Father's Details</h4>
-              <Input label="Name" name="fatherName" required />
-              <Input label="Occupation" name="fatherOccupation" required />
-              <Input label="Contact #" name="fatherContact" required />
-              <FileUpload label="Father's ID Proof" name="fatherIdDoc" required />
-              <Input label="Office Address" name="fatherOccupationAddress" required />
+              <Input label="Name" name="fatherName" required defaultValue={initialData?.fatherName} />
+              <Input label="Occupation" name="fatherOccupation" required defaultValue={initialData?.fatherOccupation} />
+              <Input label="Contact #" name="fatherContact" required defaultValue={initialData?.fatherContact} />
+              <FileUpload label="Father's ID Proof" name="fatherIdDoc" required={!initialData} />
+              <Input label="Office Address" name="fatherOccupationAddress" required defaultValue={initialData?.fatherOccupationAddress} />
            </div>
            <div className="space-y-6">
               <h4 className="text-sm font-black text-slate-900 uppercase italic">Mother's Details</h4>
-              <Input label="Name" name="motherName" required />
-              <Input label="Occupation" name="motherOccupation" required />
-              <Input label="Contact #" name="motherContact" required />
-              <FileUpload label="Mother's ID Proof" name="motherIdDoc" required />
-              <Input label="Office Address" name="motherOccupationAddress" required />
+              <Input label="Name" name="motherName" required defaultValue={initialData?.motherName} />
+              <Input label="Occupation" name="motherOccupation" required defaultValue={initialData?.motherOccupation} />
+              <Input label="Contact #" name="motherContact" required defaultValue={initialData?.motherContact} />
+              <FileUpload label="Mother's ID Proof" name="motherIdDoc" required={!initialData} />
+              <Input label="Office Address" name="motherOccupationAddress" required defaultValue={initialData?.motherOccupationAddress} />
            </div>
         </div>
         
         <div className="lg:col-span-3 mt-8">
            <h4 className="text-sm font-black text-slate-900 uppercase italic mb-6">Local Guardianship (Emergency)</h4>
            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Input label="Guardian Name" name="guardianName" required />
-              <Input label="Relationship" name="guardianRelationship" required />
-              <Input label="Contact Number" name="guardianContact" required />
+              <Input label="Guardian Name" name="guardianName" required defaultValue={initialData?.guardianName} />
+              <Input label="Relationship" name="guardianRelationship" required defaultValue={initialData?.guardianRelationship} />
+              <Input label="Contact Number" name="guardianContact" required defaultValue={initialData?.guardianContact} />
               <div className="md:col-span-3">
-                 <Input label="Guardian Address" name="guardianAddress" required />
+                 <Input label="Guardian Address" name="guardianAddress" required defaultValue={initialData?.guardianAddress} />
               </div>
            </div>
         </div>
@@ -216,7 +230,7 @@ const AddPersonForm: React.FC<AddPersonFormProps> = ({ type, settings, onCancel,
 
       <FormSection title="Institutional Validation" description="Final verification and signatures">
         <div className="lg:col-span-3 p-8 bg-white border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center text-center space-y-4">
-           <FileUpload label="Upload Parents/Guardian Signature" name="parentSignature" required />
+           <FileUpload label="Upload Parents/Guardian Signature" name="parentSignature" required={!initialData} />
            <p className="text-[10px] font-bold text-slate-400 max-w-lg">I hereby confirm that all information provided is accurate and represents official institutional data for registration.</p>
         </div>
       </FormSection>

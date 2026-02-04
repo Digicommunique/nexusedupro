@@ -55,6 +55,7 @@ export interface Student extends PersonBase {
   section: string;
   transportRouteId?: string;
   hostelId?: string;
+  feeGroupId?: string; // Group for targeted billing (e.g. Boarder, RTE, Staff Child)
   selectedActivities?: string[];
   selectedSubjects?: string[];
 }
@@ -227,6 +228,11 @@ export interface Donation {
 export interface AppSettings {
   schoolName: string;
   branchName: string;
+  logo?: string;
+  address?: string;
+  principalSignature?: string;
+  directorSignature?: string;
+  vicePrincipalSignature?: string;
 }
 
 export interface TransportRoute {
