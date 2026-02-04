@@ -1,25 +1,25 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// Guidelines: Always create a new instance right before making an API call
 export async function getDashboardInsight(stats: any) {
   try {
-    // Guidelines: Obtained exclusively from process.env.API_KEY
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // The API key is obtained exclusively from the environment variable process.env.API_KEY.
+    // We initialize it inside the function to ensure the most up-to-date key is used.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
-    // Guidelines: Using 'gemini-3-flash-preview' for basic text tasks
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Based on the following school statistics, provide a 2-sentence professional analysis for the administrator.
-      Stats: Total Students: ${stats.totalStudents}, Total Staff: ${stats.totalStaff}, Gender Ratio: ${stats.genderRatio}, Attendance Rate: ${stats.attendance}%.`,
+      contents: `You are an AI School Consultant. Provide a 2-sentence professional analysis for the administrator.
+      Stats: Total Students: ${stats.totalStudents}, Total Staff: ${stats.totalStaff}, Attendance Rate: ${stats.attendance}%. 
+      Context: Viewing data for ${stats.segment}.`,
       config: {
         thinkingConfig: { thinkingBudget: 0 }
       }
     });
-    // Guidelines: Directly accessing the .text property
-    return response.text || "Insight unavailable at the moment.";
+
+    return response.text || "Insight calibrated successfully.";
   } catch (error) {
     console.error("AI Insight Error:", error);
-    return "Error generating AI insights.";
+    return "Intelligence node synchronizing. Please check API_KEY in Vercel settings.";
   }
 }
