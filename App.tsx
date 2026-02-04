@@ -45,7 +45,6 @@ const App: React.FC = () => {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   
-  // Settings State
   const [settings, setSettings] = useState<AppSettings>({
     schoolName: 'EduNexus Academy',
     branchName: 'Main Campus',
@@ -53,25 +52,22 @@ const App: React.FC = () => {
     logo: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&q=80&w=200',
   });
   
-  // Entities State
   const [students, setStudents] = useState<Student[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [feeReceipts, setFeeReceipts] = useState<FeeReceipt[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
 
-  // Static/Partial states for remaining modules (simulated for now)
-  const [assets, setAssets] = useState<Asset[]>([]);
+  const [assets] = useState<Asset[]>([]);
   const [hostelAllotments] = useState<HostelAllotment[]>([]);
   const [exams] = useState<Examination[]>([]);
   const [feeRecords] = useState<StudentFeeRecord[]>([]);
 
-  // 1. DATA SYNC & REALTIME SUBSCRIPTIONS
   useEffect(() => {
     const syncInstitutionalData = async () => {
       setIsLoading(true);
       try {
         const [sets, stus, stf, recs, nts] = await Promise.all([
-          supabase.from('app_settings').select('*').maybeSingle(),
+          supabase.from('app_settings').select('*').limit(1).maybeSingle(),
           supabase.from('students').select('*').order('created_at', { ascending: false }),
           supabase.from('staff').select('*').order('created_at', { ascending: false }),
           supabase.from('fee_receipts').select('*').order('created_at', { ascending: false }),
@@ -92,7 +88,7 @@ const App: React.FC = () => {
 
     syncInstitutionalData();
 
-    // SETUP REALTIME CHANNELS
+    // REALTIME SUBSCRIPTIONS
     const studentChannel = supabase.channel('realtime_students').on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, (payload) => {
         if (payload.eventType === 'INSERT') setStudents(prev => [payload.new as any, ...prev]);
         if (payload.eventType === 'UPDATE') setStudents(prev => prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s));
@@ -142,21 +138,20 @@ const App: React.FC = () => {
       .eq('id', (settings as any).id);
     
     if (error) alert("Settings Update Failed: " + error.message);
-    // State update happens via Realtime Subscription
   };
 
   const handleSavePerson = async (data: any) => {
     const isStudent = activeTab === 'students';
     const table = isStudent ? 'students' : 'staff';
+    const { photo_file, ...cleanData } = data;
 
     if (editingItemId) {
-      const { error } = await supabase.from(table).update(data).eq('id', editingItemId);
+      const { error } = await supabase.from(table).update(cleanData).eq('id', editingItemId);
       if (error) alert("Update failed: " + error.message);
     } else {
-      const { error } = await supabase.from(table).insert([data]);
+      const { error } = await supabase.from(table).insert([cleanData]);
       if (error) alert("Creation failed: " + error.message);
     }
-    // State updates happen via Realtime Subscription automatically
     setShowAddForm(false);
     setEditingItemId(null);
   };
@@ -198,9 +193,9 @@ const App: React.FC = () => {
               <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: COLORS.primary }}></div>
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
-                  {isLoading ? 'Synchronizing Institutional Cloud...' : 'Secure Institutional Node'}
+                  {isLoading ? 'Establishing Global Sync...' : 'Secure Node Active'}
                 </p>
-                <h2 className="text-lg font-black text-slate-800 uppercase italic tracking-tight">{userRole} Control Interface</h2>
+                <h2 className="text-lg font-black text-slate-800 uppercase italic tracking-tight">{userRole} Terminal</h2>
               </div>
            </div>
            <button onClick={() => setIsAuthenticated(false)} className="px-6 py-2 bg-slate-50 text-slate-400 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-sm">Logout</button>
@@ -236,14 +231,10 @@ const App: React.FC = () => {
                   case 'teacher_homework': return <HomeworkModule teacher={staff[0]} students={students} />;
                   case 'teacher_messages': return <TeacherMessages teacher={staff[0]} students={students} />;
                   case 'payroll': return <PayrollModule staff={staff} settings={settings} staffAttendance={[]} />;
-                  case 'labs': return <LabModule />;
-                  case 'activities': return <ActivityModule />;
-                  case 'transport': return <TransportModule />;
-                  case 'donations': return <DonationModule />;
-                  case 'alumni': return <AlumniModule />;
                   case 'certificates': return <CertificateModule settings={settings} students={students} staff={staff} />;
                   case 'credentials': return <CredentialRegistry students={students} staff={staff} />;
-                  case 'accounts': return <AccountsModule feeReceipts={feeReceipts} payrollHistory={[]} assets={assets} settings={settings} />;
+                  case 'accounts': return <AccountsModule feeReceipts={feeReceipts} payrollHistory={[]} assets={[]} settings={settings} />;
+                  case 'financial_report': return <FinancialConsolidatedReport students={students} feeReceipts={feeReceipts} feeMasters={[]} feeTypes={[]} hostelAllotments={[]} hostelRooms={[]} transportRoutes={[]} issuedBooks={[]} damageReports={[]} />;
                   default: return <div className="p-20 text-center text-slate-300 font-black uppercase tracking-widest">Module Initializing...</div>;
                 }
               })()
