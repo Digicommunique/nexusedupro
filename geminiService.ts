@@ -5,7 +5,8 @@ export async function getDashboardInsight(stats: any) {
   try {
     // The API key is obtained exclusively from the environment variable process.env.API_KEY.
     // We initialize it inside the function to ensure the most up-to-date key is used.
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    // Fixed: Initializing GoogleGenAI using process.env.API_KEY directly as per guidelines.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',

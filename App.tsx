@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ListView from './components/ListView';
@@ -23,19 +23,44 @@ import FinancialConsolidatedReport from './components/FinancialConsolidatedRepor
 import PayrollModule from './components/PayrollModule';
 import NoticeModule from './components/NoticeModule';
 import AuthModule from './components/AuthModule';
-import CredentialRegistry from './components/CredentialRegistry';
-import TeacherProfile from './components/TeacherProfile';
-import TeacherSelfService from './components/TeacherSelfService';
-import TeacherMessages from './components/TeacherMessages';
-import HomeworkModule from './components/HomeworkModule';
-import ParentPortal from './components/ParentPortal';
 import { COLORS } from './constants';
 import { supabase } from './supabaseClient';
 import { 
-  NavItem, Student, Staff, AppSettings, HostelRoom, HostelAllotment, Asset,
-  TransportRoute, TransportAssignment, IssuedBook, DamageReport, StaffAttendance, Notice, Examination,
-  Homework, HomeworkSubmission, ExamResult, StudentFeeRecord, Donation, FeeReceipt, FeeMaster, FeeType, PayrollRecord
+  NavItem, Student, Staff, AppSettings, Notice, FeeReceipt
 } from './types';
+
+// Robust utility to convert DB snake_case to App camelCase
+const toCamel = (obj: any): any => {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(toCamel);
+  
+  const newObj: any = {};
+  for (const key in obj) {
+    const camelKey = key.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
+    newObj[camelKey] = toCamel(obj[key]);
+  }
+  return newObj;
+};
+
+// Robust utility to convert App camelCase to DB snake_case
+const toSnake = (obj: any): any => {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(toSnake);
+
+  const newObj: any = {};
+  for (const key in obj) {
+    let snakeKey;
+    if (key === 'studentId') snakeKey = 'student_id';
+    else if (key === 'staffId') snakeKey = 'staff_id';
+    else if (key === 'fatherIdDoc') snakeKey = 'father_id_doc';
+    else if (key === 'motherIdDoc') snakeKey = 'mother_id_doc';
+    else if (key === 'parentSignature') snakeKey = 'parent_signature';
+    else snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    
+    newObj[snakeKey] = toSnake(obj[key]);
+  }
+  return newObj;
+};
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -57,73 +82,51 @@ const App: React.FC = () => {
   const [feeReceipts, setFeeReceipts] = useState<FeeReceipt[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
 
-  const [assets] = useState<Asset[]>([]);
-  const [hostelAllotments] = useState<HostelAllotment[]>([]);
-  const [exams] = useState<Examination[]>([]);
-  const [feeRecords] = useState<StudentFeeRecord[]>([]);
+  const syncInstitutionalData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [sets, stus, stf, recs, nts] = await Promise.all([
+        supabase.from('app_settings').select('*').limit(1).maybeSingle(),
+        supabase.from('students').select('*').order('created_at', { ascending: false }),
+        supabase.from('staff').select('*').order('created_at', { ascending: false }),
+        supabase.from('fee_receipts').select('*').order('created_at', { ascending: false }),
+        supabase.from('notices').select('*').order('created_at', { ascending: false }),
+      ]);
+
+      if (sets.data) setSettings(toCamel(sets.data));
+      if (stus.data) setStudents(stus.data.map(toCamel));
+      if (stf.data) setStaff(stf.data.map(toCamel));
+      if (recs.data) setFeeReceipts(recs.data.map(toCamel));
+      if (nts.data) setNotices(nts.data.map(toCamel));
+    } catch (error) {
+      console.error("Critical Sync Error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const syncInstitutionalData = async () => {
-      setIsLoading(true);
-      try {
-        const [sets, stus, stf, recs, nts] = await Promise.all([
-          supabase.from('app_settings').select('*').limit(1).maybeSingle(),
-          supabase.from('students').select('*').order('created_at', { ascending: false }),
-          supabase.from('staff').select('*').order('created_at', { ascending: false }),
-          supabase.from('fee_receipts').select('*').order('created_at', { ascending: false }),
-          supabase.from('notices').select('*').order('created_at', { ascending: false }),
-        ]);
+    if (isAuthenticated) {
+      syncInstitutionalData();
 
-        if (sets.data) setSettings(sets.data);
-        if (stus.data) setStudents(stus.data as any);
-        if (stf.data) setStaff(stf.data as any);
-        if (recs.data) setFeeReceipts(recs.data as any);
-        if (nts.data) setNotices(nts.data as any);
-      } catch (error) {
-        console.error("Critical Sync Error:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      const studentChannel = supabase.channel('realtime_students').on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, (payload) => {
+          if (payload.eventType === 'INSERT') setStudents(prev => [toCamel(payload.new), ...prev]);
+          if (payload.eventType === 'UPDATE') setStudents(prev => prev.map(s => s.id === payload.new.id ? toCamel(payload.new) : s));
+          if (payload.eventType === 'DELETE') setStudents(prev => prev.filter(s => s.id !== payload.old.id));
+      }).subscribe();
 
-    syncInstitutionalData();
+      const staffChannel = supabase.channel('realtime_staff').on('postgres_changes', { event: '*', schema: 'public', table: 'staff' }, (payload) => {
+          if (payload.eventType === 'INSERT') setStaff(prev => [toCamel(payload.new), ...prev]);
+          if (payload.eventType === 'UPDATE') setStaff(prev => prev.map(s => s.id === payload.new.id ? toCamel(payload.new) : s));
+          if (payload.eventType === 'DELETE') setStaff(prev => prev.filter(s => s.id !== payload.old.id));
+      }).subscribe();
 
-    // REALTIME SUBSCRIPTIONS
-    const studentChannel = supabase.channel('realtime_students').on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, (payload) => {
-        if (payload.eventType === 'INSERT') setStudents(prev => [payload.new as any, ...prev]);
-        if (payload.eventType === 'UPDATE') setStudents(prev => prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s));
-        if (payload.eventType === 'DELETE') setStudents(prev => prev.filter(s => s.id !== payload.old.id));
-    }).subscribe();
-
-    const staffChannel = supabase.channel('realtime_staff').on('postgres_changes', { event: '*', schema: 'public', table: 'staff' }, (payload) => {
-        if (payload.eventType === 'INSERT') setStaff(prev => [payload.new as any, ...prev]);
-        if (payload.eventType === 'UPDATE') setStaff(prev => prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s));
-        if (payload.eventType === 'DELETE') setStaff(prev => prev.filter(s => s.id !== payload.old.id));
-    }).subscribe();
-
-    const noticeChannel = supabase.channel('realtime_notices').on('postgres_changes', { event: '*', schema: 'public', table: 'notices' }, (payload) => {
-        if (payload.eventType === 'INSERT') setNotices(prev => [payload.new as any, ...prev]);
-        if (payload.eventType === 'UPDATE') setNotices(prev => prev.map(n => n.id === payload.new.id ? { ...n, ...payload.new } : n));
-        if (payload.eventType === 'DELETE') setNotices(prev => prev.filter(n => n.id !== payload.old.id));
-    }).subscribe();
-
-    const settingsChannel = supabase.channel('realtime_settings').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_settings' }, (payload) => {
-        setSettings(payload.new as AppSettings);
-    }).subscribe();
-
-    const feesChannel = supabase.channel('realtime_fees').on('postgres_changes', { event: '*', schema: 'public', table: 'fee_receipts' }, (payload) => {
-        if (payload.eventType === 'INSERT') setFeeReceipts(prev => [payload.new as any, ...prev]);
-        if (payload.eventType === 'DELETE') setFeeReceipts(prev => prev.filter(r => r.id !== payload.old.id));
-    }).subscribe();
-
-    return () => {
-      supabase.removeChannel(studentChannel);
-      supabase.removeChannel(staffChannel);
-      supabase.removeChannel(noticeChannel);
-      supabase.removeChannel(settingsChannel);
-      supabase.removeChannel(feesChannel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(studentChannel);
+        supabase.removeChannel(staffChannel);
+      };
+    }
+  }, [isAuthenticated, syncInstitutionalData]);
 
   const handleLogin = (role: string) => {
     setUserRole(role);
@@ -131,55 +134,68 @@ const App: React.FC = () => {
     setActiveTab(role === 'Parent' ? 'parent_portal' : 'dashboard');
   };
 
-  const handleSaveSettings = async (newSettings: AppSettings) => {
-    const { error } = await supabase
-      .from('app_settings')
-      .update(newSettings)
-      .eq('id', (settings as any).id);
-    
-    if (error) alert("Settings Update Failed: " + error.message);
-  };
-
   const handleSavePerson = async (data: any) => {
     const isStudent = activeTab === 'students';
     const table = isStudent ? 'students' : 'staff';
-    const { photo_file, ...cleanData } = data;
-
-    if (editingItemId) {
-      const { error } = await supabase.from(table).update(cleanData).eq('id', editingItemId);
-      if (error) alert("Update failed: " + error.message);
+    
+    // EXPLICIT SCRUBBING: Remove fields that cause schema errors in specific tables
+    const scrubbed = { ...data };
+    if (!isStudent) {
+      // Staff table does not have these columns in standard setup
+      delete scrubbed.caste; 
+      delete scrubbed.grade;
+      delete scrubbed.section;
+      delete scrubbed.studentId;
+      delete scrubbed.parentSignature;
     } else {
-      const { error } = await supabase.from(table).insert([cleanData]);
-      if (error) alert("Creation failed: " + error.message);
+      // Student table does not have these
+      delete scrubbed.role;
+      delete scrubbed.staffId;
+      delete scrubbed.joiningDate;
     }
-    setShowAddForm(false);
-    setEditingItemId(null);
-  };
 
-  const handleDeletePerson = async (id: string) => {
-    const table = activeTab === 'students' ? 'students' : 'staff';
-    const { error } = await supabase.from(table).delete().eq('id', id);
-    if (error) alert("Delete failed: " + error.message);
-  };
-
-  const handleAddReceipt = async (receipt: FeeReceipt) => {
-    const { error } = await supabase.from('fee_receipts').insert([receipt]);
-    if (error) alert("Receipt sync failed: " + error.message);
-  };
-
-  const handleAddNotice = async (notice: Notice) => {
-    const { error } = await supabase.from('notices').insert([notice]);
-    if (error) alert("Notice sync failed: " + error.message);
-  };
-
-  const handleDeleteNotice = async (id: string) => {
-    const { error } = await supabase.from('notices').delete().eq('id', id);
-    if (error) alert("Notice delete failed: " + error.message);
+    const payload = toSnake(scrubbed);
+    if (!editingItemId) delete payload.id;
+    
+    try {
+      let response;
+      if (editingItemId) {
+        response = await supabase.from(table).update(payload).eq('id', editingItemId);
+      } else {
+        response = await supabase.from(table).insert([payload]);
+      }
+      
+      if (response.error) throw response.error;
+      
+      alert(`${isStudent ? 'Student' : 'Staff'} record for ${data.name} successfully committed to ledger.`);
+      
+      setShowAddForm(false);
+      setEditingItemId(null);
+      await syncInstitutionalData();
+    } catch (error: any) {
+      console.error("Supabase Transaction Error:", error);
+      alert(`Ledger Entry Failed: ${error.message || 'Check database schema compatibility'}`);
+    }
   };
 
   const handleUpdateStaffCredentials = async (staffId: string, updates: Partial<Staff>) => {
-    const { error } = await supabase.from('staff').update(updates).eq('id', staffId);
-    if (error) alert("Credential sync failed: " + error.message);
+    try {
+      const { error } = await supabase.from('staff').update(toSnake(updates)).eq('id', staffId);
+      if (error) throw error;
+      await syncInstitutionalData();
+    } catch (error: any) {
+      alert(`Credential Sync Failed: ${error.message}`);
+    }
+  };
+
+  const handleAddReceipt = async (receipt: FeeReceipt) => {
+    try {
+      const { error } = await supabase.from('fee_receipts').insert([toSnake(receipt)]);
+      if (error) throw error;
+      await syncInstitutionalData();
+    } catch (error: any) {
+      alert(`Fiscal Realization Failed: ${error.message}`);
+    }
   };
 
   if (!isAuthenticated) return <AuthModule onLogin={handleLogin} />;
@@ -193,19 +209,24 @@ const App: React.FC = () => {
               <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: COLORS.primary }}></div>
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
-                  {isLoading ? 'Establishing Global Sync...' : 'Secure Node Active'}
+                  {isLoading ? 'Calibrating...' : 'Cloud Registry Active'}
                 </p>
-                <h2 className="text-lg font-black text-slate-800 uppercase italic tracking-tight">{userRole} Terminal</h2>
+                <h2 className="text-lg font-black text-slate-800 uppercase italic tracking-tight">{userRole} Control Hub</h2>
               </div>
            </div>
-           <button onClick={() => setIsAuthenticated(false)} className="px-6 py-2 bg-slate-50 text-slate-400 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-sm">Logout</button>
+           <div className="flex items-center gap-4">
+             <button onClick={() => syncInstitutionalData()} className="p-3 rounded-2xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm group" title="Force Ledger Sync">
+               <svg className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+             </button>
+             <button onClick={() => setIsAuthenticated(false)} className="px-8 py-2.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl">Logout</button>
+           </div>
         </div>
         
-        <div className="max-w-[1400px] mx-auto p-10 print:p-0">
-          {isLoading ? (
+        <div className="max-w-[1400px] mx-auto p-10">
+          {isLoading && !showAddForm ? (
             <div className="flex flex-col items-center justify-center py-40 gap-6">
-               <div className="w-16 h-16 border-8 border-slate-100 border-t-indigo-600 rounded-full animate-spin"></div>
-               <p className="text-xs font-black text-slate-400 uppercase tracking-[0.4em]">Establishing Secure Sync...</p>
+               <div className="w-20 h-20 border-8 border-slate-100 border-t-indigo-600 rounded-full animate-spin"></div>
+               <p className="text-xs font-black text-slate-400 uppercase tracking-[0.6em]">Synchronizing Master Registry...</p>
             </div>
           ) : (
             showAddForm ? (
@@ -219,23 +240,15 @@ const App: React.FC = () => {
             ) : (
               (() => {
                 switch (activeTab) {
-                  case 'dashboard': return <Dashboard notices={notices} students={students} staff={staff} transportRoutes={[]} exams={exams} donations={[]} feeRecords={feeRecords} feeReceipts={feeReceipts} userRole={userRole} />;
-                  case 'fees': return <FeesModule students={students} staff={staff} settings={settings} hostelAllotments={hostelAllotments} hostelRooms={[]} transportRoutes={[]} issuedBooks={[]} damageReports={[]} feeReceipts={feeReceipts} onAddReceipt={handleAddReceipt} />;
-                  case 'students': return <ListView type="students" items={students} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={handleDeletePerson} onEdit={(id) => { setEditingItemId(id); setShowAddForm(true); }} />;
-                  case 'staff': return <ListView type="staff" items={staff} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={handleDeletePerson} onEdit={(id) => { setEditingItemId(id); setShowAddForm(true); }} />;
-                  case 'notices': return <NoticeModule settings={settings} notices={notices} onAddNotice={handleAddNotice} onDeleteNotice={handleDeleteNotice} />;
-                  case 'settings': return <SettingsView settings={settings} onUpdate={handleSaveSettings} staff={staff} onUpdateStaff={handleUpdateStaffCredentials} />;
-                  case 'academic': return <AcademicModule staff={staff} />;
+                  case 'dashboard': return <Dashboard notices={notices} students={students} staff={staff} transportRoutes={[]} exams={[]} donations={[]} feeRecords={[]} feeReceipts={feeReceipts} userRole={userRole} />;
+                  case 'students': return <ListView type="students" items={students} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={(id) => supabase.from('students').delete().eq('id', id).then(() => syncInstitutionalData())} onEdit={(id) => { setEditingItemId(id); setShowAddForm(true); }} />;
+                  case 'staff': return <ListView type="staff" items={staff} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={(id) => supabase.from('staff').delete().eq('id', id).then(() => syncInstitutionalData())} onEdit={(id) => { setEditingItemId(id); setShowAddForm(true); }} />;
+                  case 'settings': return <SettingsView settings={settings} onUpdate={(s) => supabase.from('app_settings').update(toSnake(s)).eq('id', (settings as any).id).then(() => syncInstitutionalData())} staff={staff} onUpdateStaff={handleUpdateStaffCredentials} />;
+                  case 'fees': return <FeesModule students={students} staff={staff} settings={settings} hostelAllotments={[]} hostelRooms={[]} transportRoutes={[]} issuedBooks={[]} damageReports={[]} feeReceipts={feeReceipts} onAddReceipt={handleAddReceipt} />;
                   case 'attendance': return <AttendanceModule students={students} staff={staff} />;
                   case 'examination': return <ExaminationModule students={students} settings={settings} />;
-                  case 'teacher_homework': return <HomeworkModule teacher={staff[0]} students={students} />;
-                  case 'teacher_messages': return <TeacherMessages teacher={staff[0]} students={students} />;
-                  case 'payroll': return <PayrollModule staff={staff} settings={settings} staffAttendance={[]} />;
-                  case 'certificates': return <CertificateModule settings={settings} students={students} staff={staff} />;
-                  case 'credentials': return <CredentialRegistry students={students} staff={staff} />;
-                  case 'accounts': return <AccountsModule feeReceipts={feeReceipts} payrollHistory={[]} assets={[]} settings={settings} />;
-                  case 'financial_report': return <FinancialConsolidatedReport students={students} feeReceipts={feeReceipts} feeMasters={[]} feeTypes={[]} hostelAllotments={[]} hostelRooms={[]} transportRoutes={[]} issuedBooks={[]} damageReports={[]} />;
-                  default: return <div className="p-20 text-center text-slate-300 font-black uppercase tracking-widest">Module Initializing...</div>;
+                  case 'notices': return <NoticeModule settings={settings} notices={notices} onAddNotice={(n) => supabase.from('notices').insert([toSnake(n)]).then(() => syncInstitutionalData())} onDeleteNotice={(id) => supabase.from('notices').delete().eq('id', id).then(() => syncInstitutionalData())} />;
+                  default: return <div className="p-20 text-center text-slate-300 font-black uppercase tracking-widest border-4 border-dashed border-slate-100 rounded-[3rem]">Select Module from Navigator</div>;
                 }
               })()
             )

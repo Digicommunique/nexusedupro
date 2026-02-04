@@ -6,11 +6,8 @@ export type StaffRole = 'Principal' | 'Coordinator' | 'Teacher' | 'Non-Teaching 
 export type Category = 'General' | 'OBC' | 'SC' | 'ST' | 'Others';
 export type Religion = 'Hindu' | 'Islam' | 'Sikh' | 'Christian' | 'Jain' | 'Jews' | 'Buddhism' | 'Zorastians' | 'Other';
 
-export interface PlannerEvent {
-  id: string;
-  type: 'Holiday' | 'Examination' | 'Event' | 'Result' | 'PTM' | 'Regular';
-  title: string;
-}
+/* Added missing PaymentMethod type */
+export type PaymentMethod = 'Cash' | 'Online' | 'Cheque' | 'UPI';
 
 export interface PersonBase {
   id: string;
@@ -55,7 +52,7 @@ export interface Student extends PersonBase {
   section: string;
   transportRouteId?: string;
   hostelId?: string;
-  feeGroupId?: string; // Group for targeted billing (e.g. Boarder, RTE, Staff Child)
+  feeGroupId?: string;
   selectedActivities?: string[];
   selectedSubjects?: string[];
 }
@@ -75,115 +72,6 @@ export interface Staff extends PersonBase {
   assignedGrade?: string;
   assignedSection?: string;
   isClassTeacher?: boolean;
-}
-
-// ASSET MANAGEMENT TYPES
-export type AssetCategory = 'Electronics' | 'Furniture' | 'Stationery' | 'Sports' | 'Lab Equipment' | 'Vehicles' | 'Other';
-export type AssetStatus = 'Operational' | 'Distributed' | 'Maintenance' | 'Damaged' | 'Disposed';
-
-export interface Asset {
-  id: string;
-  name: string;
-  category: AssetCategory;
-  purchaseDate: string;
-  cost: number;
-  serialNumber?: string;
-  location: string;
-  status: AssetStatus;
-  description: string;
-}
-
-export interface AssetAssignment {
-  id: string;
-  assetId: string;
-  assetName: string;
-  assignedToId: string; // Staff or Student ID
-  assignedToName: string;
-  assignedDate: string;
-  returnDate?: string;
-  conditionOnIssue: string;
-}
-
-export interface AssetVerificationResult {
-  id: string;
-  verificationDate: string;
-  verifiedBy: string;
-  assetsTotal: number;
-  assetsFound: number;
-  assetsMissing: number;
-  remarks: string;
-}
-
-// ACCOUNTING TYPES
-export type TransactionType = 'Income' | 'Expense';
-export type PaymentMethod = 'Cash' | 'Bank' | 'Cheque' | 'UPI';
-
-export interface FinancialTransaction {
-  id: string;
-  date: string;
-  type: TransactionType;
-  category: string; // e.g., 'Fees', 'Salary', 'Maintenance', 'Purchase'
-  amount: number;
-  method: PaymentMethod;
-  description: string;
-  referenceId?: string; // ID of the fee receipt or payroll record
-}
-
-export interface FeeType {
-  id: string;
-  name: string;
-  description: string;
-}
-
-export interface FeeGroup {
-  id: string;
-  name: string;
-  description: string;
-}
-
-export interface FeeMaster {
-  id: string;
-  feeTypeId: string;
-  feeGroupId: string;
-  amount: number;
-  dueDate: string;
-  grade: string; // Applicable to
-}
-
-export interface FeeHead {
-  id: string;
-  name: string;
-  amount: number;
-  grade: string; // 'All' or specific grade
-}
-
-export interface FeeReceipt {
-  id: string;
-  receiptNo: string;
-  studentId: string;
-  studentName: string;
-  grade: string;
-  section: string;
-  amountPaid: number;
-  discount: number;
-  discountReason?: string;
-  penalty: number;
-  penaltyReason?: string;
-  paymentDate: string;
-  paymentMethod: 'Cash' | 'Online' | 'Cheque' | 'UPI';
-  session: string;
-  description: string;
-}
-
-export interface StudentFeeRecord {
-  id: string;
-  studentId: string;
-  totalAmount: number;
-  discount: number;
-  discountReason?: string;
-  paidAmount: number;
-  dueDate: string;
-  status: 'Paid' | 'Unpaid' | 'Partial' | 'Overdue';
 }
 
 export type NavItem = 'dashboard' | 'notices' | 'students' | 'staff' | 'academic' | 'attendance' | 'examination' | 'fees' | 'payroll' | 'assets' | 'accounts' | 'library' | 'labs' | 'activities' | 'transport' | 'hostel' | 'donations' | 'alumni' | 'certificates' | 'credentials' | 'settings' | 'teacher_profile' | 'teacher_students' | 'teacher_attendance' | 'teacher_academics' | 'teacher_messages' | 'teacher_self_service' | 'teacher_homework' | 'parent_portal' | 'financial_report';
@@ -212,6 +100,56 @@ export interface Examination {
   isResultDeclared: boolean;
 }
 
+export interface AppSettings {
+  schoolName: string;
+  branchName: string;
+  logo?: string;
+  address?: string;
+  principalSignature?: string;
+  directorSignature?: string;
+  vicePrincipalSignature?: string;
+}
+
+/* Updated FeeReceipt to use PaymentMethod union */
+export interface FeeReceipt {
+  id: string;
+  receiptNo: string;
+  studentId: string;
+  studentName: string;
+  grade: string;
+  section: string;
+  amountPaid: number;
+  discount: number;
+  discountReason?: string;
+  penalty: number;
+  penaltyReason?: string;
+  paymentDate: string;
+  paymentMethod: PaymentMethod;
+  session: string;
+  description: string;
+}
+
+export interface StudentFeeRecord {
+  id: string;
+  studentId: string;
+  totalAmount: number;
+  discount: number;
+  discountReason?: string;
+  paidAmount: number;
+  dueDate: string;
+  status: 'Paid' | 'Unpaid' | 'Partial' | 'Overdue';
+}
+
+/* Added missing interfaces for various modules across the application */
+
+export interface TransportRoute {
+  id: string;
+  name: string;
+  stops: string[];
+  distanceKm: number;
+  ratePerKm: number;
+}
+
 export interface Donation {
   id: string;
   campaignId: string;
@@ -225,22 +163,166 @@ export interface Donation {
   date: string;
 }
 
-export interface AppSettings {
-  schoolName: string;
-  branchName: string;
-  logo?: string;
-  address?: string;
-  principalSignature?: string;
-  directorSignature?: string;
-  vicePrincipalSignature?: string;
+export interface HostelRoom {
+  id: string;
+  hostelId: string;
+  roomNo: string;
+  capacity: number;
+  occupied: number;
+  monthlyFee: number;
 }
 
-export interface TransportRoute {
+export interface HostelAllotment {
+  id: string;
+  studentId: string;
+  studentName: string;
+  hostelId: string;
+  roomId: string;
+  allotmentDate: string;
+  feeStatus: 'Paid' | 'Pending';
+}
+
+export type AssetCategory = 'Electronics' | 'Furniture' | 'Stationery' | 'Sports' | 'Lab Equipment' | 'Vehicles' | 'Other';
+export type AssetStatus = 'Operational' | 'Distributed' | 'Damaged' | 'Disposed';
+
+export interface Asset {
   id: string;
   name: string;
-  stops: string[];
-  distanceKm: number;
-  ratePerKm: number;
+  category: AssetCategory;
+  purchaseDate: string;
+  cost: number;
+  serialNumber?: string;
+  location: string;
+  status: AssetStatus;
+  description: string;
+}
+
+export interface TransportAssignment {
+  id: string;
+  vehicleId: string;
+  routeId: string;
+  driverId: string;
+  conductorId: string;
+  status: 'In Transit' | 'Parked';
+}
+
+export interface IssuedBook {
+  id: string;
+  itemId: string;
+  personId: string;
+  personName: string;
+  issueDate: string;
+  dueDate: string;
+  reissueCount: number;
+  lateFee: number;
+  damageFee: number;
+}
+
+export interface DamageReport {
+  id: string;
+  itemId: string;
+  itemName: string;
+  labType: string;
+  reason: string;
+  reportedBy: string;
+  reportedDate: string;
+}
+
+export interface StaffAttendance {
+  id: string;
+  staffId: string;
+  date: string;
+  status: AttendanceStatus;
+}
+
+export interface StudentAttendance {
+  id: string;
+  studentId: string;
+  date: string;
+  status: AttendanceStatus;
+  grade: string;
+  section: string;
+}
+
+export interface Homework {
+  id: string;
+  title: string;
+  description: string;
+  grade: string;
+  section: string;
+  subject: string;
+  dueDate: string;
+}
+
+export interface HomeworkSubmission {
+  id: string;
+  homeworkId: string;
+  studentId: string;
+  studentName: string;
+  submissionDate: string;
+  status: 'Pending' | 'Checked';
+  feedback?: string;
+  fileUrl?: string;
+  marks?: number;
+}
+
+export interface ExamResult {
+  id: string;
+  examId: string;
+  studentId: string;
+  marksObtained: number;
+  grade: string;
+  promotionStatus: 'Pending' | 'Promoted' | 'Detained';
+  isPublished: boolean;
+  englishComm?: string;
+  hindiComm?: string;
+  viva?: number;
+  sports?: string;
+  library?: string;
+  handwritingEng?: string;
+  handwritingHindi?: string;
+  activities?: string;
+  teacherRemarks?: string;
+}
+
+export interface FeeMaster {
+  id: string;
+  feeTypeId: string;
+  feeGroupId: string;
+  grade: string;
+  amount: number;
+  dueDate: string;
+}
+
+export interface FeeType {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface FeeGroup {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface PayrollRecord {
+  id: string;
+  staffId: string;
+  month: string;
+  basePay: number;
+  allowances: number;
+  bonus: number;
+  deductions: number;
+  netSalary: number;
+  generatedDate: string;
+  status: 'Paid' | 'Unpaid';
+}
+
+export interface PlannerEvent {
+  id: string;
+  type: 'Holiday' | 'Examination' | 'Event' | 'Result' | 'PTM' | 'Regular';
+  title: string;
 }
 
 export interface LessonPlan {
@@ -269,19 +351,6 @@ export interface LibraryItem {
   registeredDate: string;
 }
 
-export interface IssuedBook {
-  id: string;
-  itemId: string;
-  personId: string;
-  personName: string;
-  issueDate: string;
-  dueDate: string;
-  returnDate?: string;
-  reissueCount: number;
-  lateFee: number;
-  damageFee: number;
-}
-
 export interface Rack {
   id: string;
   name: string;
@@ -304,16 +373,6 @@ export interface LabItem {
   status: 'Functional' | 'Damaged' | 'Maintenance';
 }
 
-export interface DamageReport {
-  id: string;
-  itemId: string;
-  itemName: string;
-  labType: string;
-  reason: string;
-  reportedBy: string;
-  reportedDate: string;
-}
-
 export interface ProcurementOrder {
   id: string;
   itemName: string;
@@ -322,7 +381,7 @@ export interface ProcurementOrder {
   unit: string;
   vendorName: string;
   estimatedCost: number;
-  status: 'Pending' | 'Approved' | 'Ordered' | 'Received';
+  status: 'Pending' | 'Approved' | 'Delivered';
   orderDate: string;
 }
 
@@ -335,7 +394,7 @@ export interface ActivityAsset {
   vendor: string;
   quantity: number;
   unit: string;
-  condition: 'Excellent' | 'Good' | 'Fair' | 'Damaged';
+  condition: 'Excellent' | 'Good' | 'Damaged';
   lastMaintenanceDate: string;
 }
 
@@ -343,7 +402,7 @@ export interface TransportVehicle {
   id: string;
   busNumber: string;
   capacity: number;
-  status: 'Active' | 'Maintenance' | 'Inactive';
+  status: 'Active' | 'Inactive';
 }
 
 export interface TransportPersonnel {
@@ -355,15 +414,6 @@ export interface TransportPersonnel {
   licenseNumber?: string;
 }
 
-export interface TransportAssignment {
-  id: string;
-  vehicleId: string;
-  routeId: string;
-  driverId: string;
-  conductorId: string;
-  status: 'In Transit' | 'Parked';
-}
-
 export interface DonationCampaign {
   id: string;
   title: string;
@@ -371,27 +421,10 @@ export interface DonationCampaign {
   type: 'Monetary' | 'Items' | 'Mixed';
   targetAmount?: number;
   currentAmount: number;
-  targetItems?: { type: string; quantity: number }[];
+  targetItems: { type: string; quantity: number }[];
   currentItems: { type: string; quantity: number }[];
-  status: 'Active' | 'Completed' | 'Paused';
+  status: 'Active' | 'Completed';
   startDate: string;
-}
-
-export interface StudentAttendance {
-  id: string;
-  studentId: string;
-  date: string;
-  status: AttendanceStatus;
-  grade: string;
-  section: string;
-  subject?: string;
-}
-
-export interface StaffAttendance {
-  id: string;
-  staffId: string;
-  date: string;
-  status: AttendanceStatus;
 }
 
 export interface Alumni extends PersonBase {
@@ -427,44 +460,13 @@ export interface Hostel {
   wardenId: string;
 }
 
-export interface HostelRoom {
-  id: string;
-  hostelId: string;
-  roomNo: string;
-  capacity: number;
-  occupied: number;
-  monthlyFee: number;
-}
-
-export interface HostelAllotment {
-  id: string;
-  studentId: string;
-  studentName: string;
-  hostelId: string;
-  roomId: string;
-  allotmentDate: string;
-  feeStatus: 'Paid' | 'Pending' | 'Partial';
-}
-
 export interface HostelLeave {
   id: string;
   studentId: string;
   departureDate: string;
   expectedReturn: string;
   reason: string;
-  status: 'Approved' | 'Pending' | 'Returned';
-}
-
-export type FeeCategory = 'Tuition' | 'Transport' | 'Hostel' | 'Library' | 'Lab' | 'Activity' | 'Other';
-export type AcademicWing = 'Foundation' | 'Primary' | 'Middle' | 'Senior';
-
-export interface FeeStructure {
-  id: string;
-  wing: AcademicWing;
-  grade: string;
-  category: FeeCategory;
-  amount: number;
-  period: 'Monthly' | 'Quarterly' | 'Annual';
+  status: 'Approved' | 'Returned';
 }
 
 export interface SalaryStructure {
@@ -485,69 +487,38 @@ export interface LeaveRequest {
   endDate: string;
   reason: string;
   type: 'Sick' | 'Casual' | 'Annual' | 'Personal';
-  status: 'Approved' | 'Pending' | 'Rejected';
+  status: 'Approved' | 'Pending';
 }
 
-export interface PayrollRecord {
+export interface AssetAssignment {
   id: string;
-  staffId: string;
-  month: string;
-  basePay: number;
-  allowances: number;
-  bonus: number;
-  deductions: number;
-  netSalary: number;
-  generatedDate: string;
-  status: 'Paid' | 'Pending';
+  assetId: string;
+  assetName: string;
+  assignedToId: string;
+  assignedToName: string;
+  assignedDate: string;
+  conditionOnIssue: string;
 }
 
-export interface ExamResult {
+export interface AssetVerificationResult {
   id: string;
-  examId: string;
-  studentId: string;
-  marksObtained: number;
-  grade: string;
-  promotionStatus: 'Promoted' | 'Detained' | 'Pending';
-  isPublished: boolean;
-  englishComm?: string;
-  hindiComm?: string;
-  viva?: number;
-  sports?: string;
-  library?: string;
-  handwritingEng?: string;
-  handwritingHindi?: string;
-  activities?: string;
-  teacherRemarks?: string;
+  verificationDate: string;
+  verifiedBy: string;
+  assetsTotal: number;
+  assetsFound: number;
+  assetsMissing: number;
+  remarks: string;
 }
 
-export interface Homework {
+export type TransactionType = 'Income' | 'Expense';
+
+export interface FinancialTransaction {
   id: string;
-  title: string;
+  date: string;
+  type: TransactionType;
+  category: string;
+  amount: number;
+  method: PaymentMethod | 'Bank';
   description: string;
-  grade: string;
-  section: string;
-  subject: string;
-  dueDate: string;
-  fileUrl?: string;
-}
-
-export interface HomeworkSubmission {
-  id: string;
-  homeworkId: string;
-  studentId: string;
-  studentName: string;
-  submissionDate: string;
-  status: 'Pending' | 'Checked';
-  marks?: number;
-  feedback?: string;
-  fileUrl?: string;
-}
-
-export interface StudentLeaveRequest {
-  id: string;
-  studentId: string;
-  startDate: string;
-  endDate: string;
-  reason: string;
-  status: 'Approved' | 'Pending' | 'Rejected';
+  referenceId: string;
 }
