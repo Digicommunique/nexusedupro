@@ -227,6 +227,8 @@ export interface Donation {
 export interface AppSettings {
   schoolName: string;
   branchName: string;
+  schoolStartTime: string; // HH:mm
+  schoolEndTime: string;   // HH:mm
 }
 
 export interface TransportRoute {
@@ -379,6 +381,8 @@ export interface StudentAttendance {
   grade: string;
   section: string;
   subject?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
 }
 
 export interface StaffAttendance {
@@ -386,6 +390,8 @@ export interface StaffAttendance {
   staffId: string;
   date: string;
   status: AttendanceStatus;
+  checkInTime?: string;
+  checkOutTime?: string;
 }
 
 export interface Alumni extends PersonBase {

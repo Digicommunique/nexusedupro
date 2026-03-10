@@ -9,9 +9,10 @@ interface ListViewProps {
   onAdd: () => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onViewID?: (id: string) => void;
 }
 
-const ListView: React.FC<ListViewProps> = ({ type, items, onAdd, onEdit, onDelete }) => {
+const ListView: React.FC<ListViewProps> = ({ type, items, onAdd, onEdit, onDelete, onViewID }) => {
   const handleDelete = (id: string, name: string) => {
     if (confirm(`Are you sure you want to delete the record for ${name}? This action cannot be undone.`)) {
       onDelete?.(id);
@@ -93,6 +94,13 @@ const ListView: React.FC<ListViewProps> = ({ type, items, onAdd, onEdit, onDelet
                     </td>
                     <td className="px-6 py-4 text-right px-8">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => onViewID?.(item.id)}
+                          className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100 transition-all active:scale-90"
+                          title="View ID Card"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" /></svg>
+                        </button>
                         <button 
                           onClick={() => onEdit?.(item.id)}
                           className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 transition-all active:scale-90"

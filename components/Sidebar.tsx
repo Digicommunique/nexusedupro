@@ -72,6 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({ active, onSelect, userRole }) => {
 
   const parentItems: { id: NavItem; label: string; icon: React.ComponentType }[] = [
     { id: 'parent_portal', label: 'Parent Terminal', icon: Icons.Dashboard },
+    { id: 'attendance', label: 'Attendance Reports', icon: Icons.Attendance },
     { id: 'notices', label: 'Notice Feed', icon: Icons.Certificate },
   ];
 

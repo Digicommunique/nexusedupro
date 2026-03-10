@@ -16,6 +16,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, onUpdate }) => {
     const updated = {
       schoolName: formData.get('schoolName') as string,
       branchName: formData.get('branchName') as string,
+      schoolStartTime: formData.get('schoolStartTime') as string,
+      schoolEndTime: formData.get('schoolEndTime') as string,
     };
     onUpdate(updated);
   };
@@ -44,6 +46,28 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, onUpdate }) => {
             <input
               name="branchName"
               defaultValue={settings.branchName}
+              required
+              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 outline-none transition-all text-sm font-medium"
+              style={{ '--tw-ring-color': COLORS.primary } as any}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">School Start Time</label>
+            <input
+              type="time"
+              name="schoolStartTime"
+              defaultValue={settings.schoolStartTime}
+              required
+              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 outline-none transition-all text-sm font-medium"
+              style={{ '--tw-ring-color': COLORS.primary } as any}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">School End Time</label>
+            <input
+              type="time"
+              name="schoolEndTime"
+              defaultValue={settings.schoolEndTime}
               required
               className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 outline-none transition-all text-sm font-medium"
               style={{ '--tw-ring-color': COLORS.primary } as any}

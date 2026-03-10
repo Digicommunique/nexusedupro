@@ -4,8 +4,8 @@ import { GoogleGenAI } from "@google/genai";
 // Guidelines: Always create a new instance right before making an API call
 export async function getDashboardInsight(stats: any) {
   try {
-    // Guidelines: Obtained exclusively from process.env.API_KEY
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Guidelines: Obtained exclusively from process.env.GEMINI_API_KEY
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
     // Guidelines: Using 'gemini-3-flash-preview' for basic text tasks
     const response = await ai.models.generateContent({

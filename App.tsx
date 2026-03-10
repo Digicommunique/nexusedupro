@@ -29,6 +29,7 @@ import TeacherSelfService from './components/TeacherSelfService';
 import TeacherMessages from './components/TeacherMessages';
 import HomeworkModule from './components/HomeworkModule';
 import ParentPortal from './components/ParentPortal';
+import IDCard from './components/IDCard';
 import { COLORS } from './constants';
 import { 
   NavItem, Student, Staff, AppSettings, HostelRoom, HostelAllotment, Asset,
@@ -42,10 +43,13 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavItem>('dashboard');
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [viewingIDCardId, setViewingIDCardId] = useState<string | null>(null);
   
   const [settings, setSettings] = useState<AppSettings>({
     schoolName: 'EduNexus Academy',
-    branchName: 'Main Campus'
+    branchName: 'Main Campus',
+    schoolStartTime: '08:00',
+    schoolEndTime: '14:30'
   });
   
   // Dynamic States for CRUD
@@ -155,6 +159,10 @@ const App: React.FC = () => {
     setShowAddForm(true);
   };
 
+  const handleViewIDCard = (id: string) => {
+    setViewingIDCardId(id);
+  };
+
   const renderContent = () => {
     if (showAddForm) {
       const targetList = activeTab === 'students' ? students : staff;
@@ -204,11 +212,11 @@ const App: React.FC = () => {
       );
       case 'library': return <LibraryModule students={students} staff={staff} settings={settings} />;
       case 'hostel': return <HostelModule students={students} staff={staff} />;
-      case 'students': return <ListView type="students" items={students} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={handleDeletePerson} onEdit={handleEditRequest} />;
-      case 'staff': return <ListView type="staff" items={staff} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={handleDeletePerson} onEdit={handleEditRequest} />;
+      case 'students': return <ListView type="students" items={students} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={handleDeletePerson} onEdit={handleEditRequest} onViewID={handleViewIDCard} />;
+      case 'staff': return <ListView type="staff" items={staff} onAdd={() => { setEditingItemId(null); setShowAddForm(true); }} onDelete={handleDeletePerson} onEdit={handleEditRequest} onViewID={handleViewIDCard} />;
       case 'notices': return <NoticeModule settings={settings} notices={notices} onAddNotice={(n) => setNotices([n, ...notices])} onDeleteNotice={(id) => setNotices(notices.filter(x => x.id !== id))} />;
       case 'academic': return <AcademicModule />;
-      case 'attendance': return <AttendanceModule students={students} staff={staff} />;
+      case 'attendance': return <AttendanceModule students={students} staff={staff} settings={settings} userRole={userRole} />;
       case 'examination': return <ExaminationModule students={students} settings={settings} />;
       case 'teacher_homework': return <HomeworkModule teacher={staff[0]} students={students} />;
       case 'teacher_messages': return <TeacherMessages teacher={staff[0]} students={students} />;
@@ -243,6 +251,34 @@ const App: React.FC = () => {
         </div>
         <div className="max-w-[1400px] mx-auto p-10 print:p-0">{renderContent()}</div>
       </main>
+      {/* ID Card Modal */}
+      {viewingIDCardId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="relative animate-in zoom-in-95 duration-300">
+            <button 
+              onClick={() => setViewingIDCardId(null)}
+              className="absolute -top-12 right-0 p-2 text-white hover:text-indigo-400 transition-colors"
+            >
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            {(() => {
+              const person = students.find(s => s.id === viewingIDCardId) || staff.find(s => s.id === viewingIDCardId);
+              return person ? (
+                <div className="flex flex-col items-center gap-6">
+                  <IDCard person={person} settings={settings} />
+                  <button 
+                    onClick={() => window.print()}
+                    className="px-8 py-3 bg-white text-slate-900 rounded-xl font-black uppercase tracking-widest shadow-2xl hover:bg-indigo-50 transition-all flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    Print ID Card
+                  </button>
+                </div>
+              ) : null;
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
