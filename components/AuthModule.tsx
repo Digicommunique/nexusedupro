@@ -26,7 +26,7 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onLogin }) => {
 
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
-    if (userId === 'admin12' && password === 'admin') {
+    if (userId === 'admin12' && password === 'admin12345') {
       onLogin(selectedRole?.label || 'Admin');
     } else {
       setError('Invalid Institutional Credentials');
